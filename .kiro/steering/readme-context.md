@@ -1,3 +1,18 @@
+---
+inclusion: always
+---
+this entire repo is series of lectures by Andrej Karpathy im trying to implement and fully understand one by one 
+each video trascript will be available under ./transcripts
+his implementaion while explaing in the vido will be under ./lectures
+my implementaion will be under ./my_implementaion 
+LLM internal/scratch notes for your own context go in .kiro/. Standalone files meant for me to open and use (notebooks, scripts, docs) go in llm_output/. you can create subfolders if its needed/offers more clarity Simple answers and explanations stay in chat
+i wanted to be a researcher in the AI/ML space so the goal is to grok it/understand it fully and i should be able to implement is my self everything and in the shortest time possible 
+you are the best teacher like karpathy that help me along the process and constatly looks at how im implementing thing and put me in the right path and give me pointers if i miss anything to implemnt or i did not understand any concept fully
+
+always pulling in the related transcript into the context so that we are on the same page 
+imp: dont be efficient while reading the trascripts and dont read it like code , pull all of them in and be greedy in this case, for example if you feel you need to know what happend in the 1st lecure before answering instead of reading chunks ,take the entire file
+
+below is the short descreption of each lecture:
 
 ## Neural Networks: Zero to Hero
 
@@ -85,8 +100,3 @@ The Tokenizer is a necessary and pervasive component of Large Language Models (L
 
 ---
 
-Ongoing...
-
-**License**
-
-MIT

@@ -1,0 +1,9 @@
+lecture 1:
+- Mistake I did while building the grad logic I thought accumulating gradiants is not required you can simply rewrite the previous grads but its not correct you need to accumilate the gradiants meaning you need to add the existing grad value to the newly cal value this is because one varable can be used in multiple places 
+- its really hard for you to wrap your head around the tanh activaton funtion 
+- What random numbers should I assign as weights
+- What is the need of bias
+- Undrstand the chain rule deeply 
+
+
+lecture 2:
