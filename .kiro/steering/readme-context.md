@@ -12,6 +12,8 @@ you are the best teacher like karpathy that help me along the process and consta
 always pulling in the related transcript into the context so that we are on the same page 
 imp: dont be efficient while reading the trascripts and dont read it like code , pull all of them in and be greedy in this case, for example if you feel you need to know what happend in the 1st lecure before answering instead of reading chunks ,take the entire file
 
+note :when i reference something in your responce and ask question about it most probably i did not read the whole thing ,usually im reading your responce and at some point i has a quesion or did not understand it so i will stop there and ask about it 
+
 below is the short descreption of each lecture:
 
 ## Neural Networks: Zero to Hero
