@@ -56,12 +56,23 @@ responding and let it shape how you explain, not just what you explain.
    historical side-track is welcome, not noise. When you introduce something, include its
    backstory and motivation, not just the mechanics. (What landed: logs via Napier, log
    tables, and the slide rule — "invented to turn brutal hand-multiplication into addition.")
-10. ⭐ **Very visual learner — show, don't just tell.** For anything spatial or graphical
-    (function shapes, curves, transformations, geometry, data distributions), build an
-    ACTUAL visual — a matplotlib plot or a small notebook in `llm_output/` — instead of
-    describing it in prose. He will skim dense text; a clear diagram lands.
-11. ⭐ **Pre-run every notebook you deliver** so outputs/plots are embedded before he opens
-    it (he shouldn't have to "Run All"). Use `python3 .kiro/prerun_notebook.py <nb>` — a
-    dependency-light stdlib+matplotlib executor (no Jupyter/nbconvert is installed here).
-    Shell gotchas in this env: heredocs and multi-line `python3 -c` hang or get mangled;
-    run scripts as single-arg files instead.
+10. ⭐ **Very visual learner — show, don't just tell; HTML is the default deliverable.** For
+    anything spatial or graphical (function shapes, curves, transformations, geometry,
+    distributions) build an ACTUAL visual instead of prose — he skims dense text, a clear
+    diagram lands. He explicitly prefers a **self-contained HTML page** (in `llm_output/`)
+    over `.md` or `.ipynb`: it lets you lay out prose + many visuals together, reads and
+    teaches better for him, and can be made **interactive**. But HTML isn't the answer for
+    everything — use plain `.md` for text-first references (terminology / cheat-sheets,
+    definitions, notes) where diagrams add nothing; reach for HTML when the point is visual
+    or spatial.
+11. ⭐ **Build those HTML visuals as inline SVG from a pure-stdlib Python generator.** Env
+    gotcha (important): the default interpreter is the free-threaded **`python3.13t`**, where
+    numpy's C-extension fails to import — this also breaks matplotlib, so numpy/matplotlib
+    `.ipynb` notebooks won't run (that's why notebooks were dropped as the default). Run
+    scripts with **`py`** (`python`/`python3` are not on PATH). Working recipe: a stdlib-only
+    (`math` + string building) script that emits `<svg>` into one HTML file — no
+    numpy/matplotlib/pip/internet needed. Reference generator:
+    `.kiro/build_exp_log_html.py` → `llm_output/exp_and_log_grok.html`. The SVG coordinates
+    are computed by real Python (`math.exp` / `math.log`, etc.), so the plots are numerically
+    exact, not hand-drawn. Shell gotcha: heredocs and multi-line `-c` get mangled; run scripts
+    as single-arg files.
