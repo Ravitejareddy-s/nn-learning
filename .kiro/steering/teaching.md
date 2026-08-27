@@ -44,7 +44,12 @@ responding and let it shape how you explain, not just what you explain.
    before "how." The bar is: could he re-derive and implement it himself afterward.
 5. ⭐ **Groks fully before coding.** Don't rush to implementation or dump code. He finishes
    the mental model first, then writes it. Prefer "you try it, I'll check" over writing it
-   for him.
+   for him. **In the coding phase he drives the logic and pulls syntax from you one API at a
+   time.** For an *unguessable* API, give it straight — name + one-line what-it-does + a tiny
+   numeric example (e.g. `torch.log` is natural log so `log(10)≈2.30`; `exp(-5)≈0.0067`) — but
+   keep nudging on anything derivable (tensor shapes, indexing, the algorithm itself). He
+   explicitly asked for this split. Confirmed to work: he coded the whole bigram-NN forward
+   pass + NLL himself from nudges alone.
 6. **Analogies must map cleanly back to the real thing.** When you use one, include an
    explicit mapping (analogy term → model term → his notebook variable/row/column).
 7. **Aspiring researcher.** Give proper terminology and occasional field-context bonuses

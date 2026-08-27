@@ -37,6 +37,11 @@ He splits lecture 2 into two sections:
   softmax (needs positivity + order) and log-likelihood (needs the argmax) are unaffected.
   They're inverses → lossless. `e^x` is a curve (equal x-steps → ×e; slope = its own height).
   "log of a bump peaks at the same w" = why maximizing log-likelihood ≡ maximizing likelihood.
+- **Neural-net forward pass + NLL — now IMPLEMENTED and validated himself** (`bigram_with_nn.ipynb`).
+  integer → `F.one_hot(..., num_classes=27).float()` → `@ W` → softmax (`exp` then /sum) → index
+  the true letter's prob `avg[out[i]]` → `-log` → accumulate → `/N`. Ran it: loss = **3.6873**,
+  i.e. just above the uniform floor `log(27)≈3.30` — the correct random-init signature (a bug
+  would give NaN or ~8). Coded entirely from nudges. Confirms the net's row/column read in code.
 
 ### Solid (understood conceptually, not yet coded)
 - Why the raw product underflows; `log` turns × into +; log is monotonic (so optimizing it
@@ -46,10 +51,8 @@ He splits lecture 2 into two sections:
   the degenerate "always aaaaaa" model scores its own output ~1.0).
 - The length effect is a decode-time issue (beam search / length normalization), NOT a
   training or sampling bias; bigram counts are pooled and length-blind.
-- Neural-net forward pass: integer → one-hot → `@ W` → logits → softmax → probability row.
-  First letter picks the row, second letter is the column you read off. Logits are
-  relative; the softmax output is a true probability. One-hot @ W just selects a row of W;
-  `softmax(W)` converges to the counts matrix.
+- One-hot @ W just selects a row of W; after training, `softmax(W)` should converge to the
+  counts matrix. Not yet verified in code — needs the training loop (see next steps).
 
 ### Shaky (reteach / watch)
 - Gradient intuition: he first guessed a product loss makes descent *overstep*; it actually
@@ -59,24 +62,53 @@ He splits lecture 2 into two sections:
 - The "exp/log change the value, so how can the result be right?" instinct — resolved via
   the monotonic-relabel + "same peak on the mountain" picture (`llm_output/exp_and_log_grok.html`).
   Verify it holds when softmax/NLL show up in code.
-- Keep arithmetic in percentages, not fractions.
+- **`square` vs `exp` slip (coding):** his first forward-pass draft used square-then-normalize
+  as the positivity function instead of `exp`. Fixed via the monotonicity anchor — square isn't
+  order-preserving (`square(-5)=25 > square(2)=4`, so a strong-negative logit would win), whereas
+  `exp` always keeps bigger-logit → bigger-prob. Watch for it recurring.
+- **Notebook stale-state trap:** got confused by a stale `loss` output (a `[27]` tensor tagged
+  `SqueezeBackward1`) left over from an un-rerun cell. Habit to build: check the execution-count
+  and re-run before trusting an output.
+- **Summing vs averaging the loss:** first version did `loss += pick` but forgot the final `/N`.
+  The average is what makes it comparable to the ~2.45 / `log(27)` benchmarks.
 
-## Implementation status (`bigram.ipynb`)
+## Implementation status
+
+**Section 1 (`bigram.ipynb`):**
 - Done: counts, probability matrix, sampling.
-- NOT yet done: scoring a name / dataset NLL loss. This was the immediate next step.
-  Reminder: include the ending `i.` bigram — he initially dropped the end token when
-  listing "ravi" as `.r ra av vi`.
-- Section 2 (neural net): pseudocode written and validated this session (both blockers
-  fixed — see log). Not yet coded; ready to implement.
+- NOT yet done: scoring a name / dataset NLL loss (counts route). Reminder: include the ending
+  `i.` bigram — he initially dropped the end token when listing "ravi" as `.r ra av vi`.
+
+**Section 2 (`bigram_with_nn.ipynb`):**
+- DONE + validated himself: one-hot all inputs, `W = torch.randn(27,27,requires_grad=True)`,
+  full forward pass + average NLL. Runs; loss = **3.6873** (correct random-init value).
+- Current code loops in Python over all ~228k bigrams — correct but far too slow to train.
+  Immediate next step is to vectorize into a single `X @ W` over the whole `[N,27]` matrix.
+  I already gave the nudges: stack one-hots (or `F.one_hot(torch.tensor(inp),27).float()`),
+  one matmul, row-softmax with `sum(dim=1, keepdim=True)`, then the **two-index gather** for
+  target probs (`probs[torch.arange(N), out]`) — I told him I'd hand over the gather syntax
+  when he reaches it, so don't pre-empt it.
+- NOT yet coded: the training loop (`loss.backward()` → update → reset grad); sampling from the net.
+
+## PyTorch syntax he now knows (don't re-explain unless asked)
+`torch.tensor` vs `torch.Tensor` (data vs shape — the footgun that gave him `[0,0,0,0,0]`),
+`F.one_hot(x, num_classes=)`, `.to(torch.float32)`, `torch.randn(...)` + `requires_grad=True`,
+`torch.exp`, `torch.log` (natural, float-only), `.shape`/`.ndim`, `reshape(1,-1)`/`unsqueeze`/
+`squeeze`, `@` matmul, `torch.sum`.
+Not yet introduced: `sum(dim=, keepdim=)`, the two-index gather, `.backward()`, `torch.no_grad()`,
+`.mean()`, and `torch.multinomial` in the net-sampling context.
 
 ## Next steps
-1. Implement scoring: for real names, sum `log(prob[i][j])` over their bigrams, negate,
-   average over all bigrams — expect ~2.45.
-2. Implement Section 2 (**active focus** — pseudocode validated this session): one-hot →
-   `W` → softmax → NLL, train with gradient descent, confirm it lands on ~2.45 and produces
-   the same samples as the counts route.
-3. Not yet covered from the lecture: model smoothing (fake counts) and its regularization
-   equivalent in the net; sampling from the net.
+1. **Vectorize the forward pass** (active focus): replace the per-bigram loop with `X @ W` on the
+   full `[N,27]` matrix; row-softmax via `counts.sum(dim=1, keepdim=True)`; pull target probs with
+   the two-index gather `probs[torch.arange(N), out]`; `.mean()`. Hand him the gather syntax when
+   he hits it, not before.
+2. **Gradient-descent loop:** `loss.backward()` → `W.data += -lr * W.grad` (under `torch.no_grad()`)
+   → reset `W.grad`. Confirm loss falls toward ~2.45 and samples match the counts route. The
+   gradient-vanishing intuition (shaky item) becomes concrete here.
+3. Scoring in the counts route (Section 1) still pending — expect ~2.45.
+4. Not yet covered: smoothing (fake counts) ↔ L2 regularization on the net; sampling from the
+   trained net.
 
 ## Session log
 - 2026-07-15: Deep dive on the scoring half of Section 1 — why multiply (chain rule /
@@ -97,3 +129,16 @@ He splits lecture 2 into two sections:
   (lossless), and the "same peak" visual. Built `llm_output/exp_and_log_grok.html` (pure-
   stdlib inline SVG, since numpy/matplotlib are broken under python3.13t). HTML is now his
   preferred explainer format. Green-lit to implement Section 2; no code written yet.
+- 2026-08-26: **First PyTorch coding session** (his first time touching the library). He
+  implemented Section 2's forward pass + average NLL end-to-end in `bigram_with_nn.ipynb`,
+  entirely from nudges, and validated it (loss 3.6873 vs the `log(27)≈3.30` floor). Fed him
+  unguessable syntax one piece at a time: `torch.tensor` vs `torch.Tensor` (shape-vs-data
+  footgun), `F.one_hot(num_classes=27)`, `torch.randn` + `requires_grad=True`, `torch.exp`,
+  `torch.log` (natural, needs float), `.shape`/`.ndim`, `reshape`/`unsqueeze`/`squeeze`.
+  Caught and fixed: square-vs-exp slip (monotonicity), wrong loss index `avg[index]`→
+  `avg[out[index]]`, stale-notebook-cell confusion, sum-vs-average. Explained `num_classes`
+  via the "your net is a 27-way classifier" framing (class ← classification). Built
+  `llm_output/mean_and_std_grok.html` (mean/std, the normal distribution, and why `randn` not
+  `rand` for weights — same pure-stdlib inline-SVG recipe as the exp/log page; Gauss +
+  Galton-board origin story). Left off ready to vectorize the loop, then wire up gradient
+  descent.
