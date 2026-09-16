@@ -57,6 +57,12 @@ He splits lecture 2 into two sections:
 ### Shaky (reteach / watch)
 - Gradient intuition: he first guessed a product loss makes descent *overstep*; it actually
   makes gradients *vanish* (flat landscape → stuck). Reinforce when we hit the training loop.
+- **Learning-rate feel (new, watch):** his training loop used `lr=0.1` for 10000 iters and
+  plateaued at ~2.57, which he read as "converged." It wasn't — the step was just too small
+  (small gradients × small lr ≈ no motion). At `lr=50` it hits ~2.46 in 100–200 iters (I
+  verified: counts floor 2.4540; lr=50/200it → 2.4624). This is the exact spot Karpathy bumps
+  0.1→50. Lesson to reinforce: a flat-looking loss can mean "step too small," not "done" —
+  check by cranking lr and seeing if it drops further.
 - Probability vs likelihood (same number, different viewpoint) — just introduced, let it
   settle.
 - The "exp/log change the value, so how can the result be right?" instinct — resolved via
@@ -80,35 +86,45 @@ He splits lecture 2 into two sections:
   `i.` bigram — he initially dropped the end token when listing "ravi" as `.r ra av vi`.
 
 **Section 2 (`bigram_with_nn.ipynb`):**
-- DONE + validated himself: one-hot all inputs, `W = torch.randn(27,27,requires_grad=True)`,
-  full forward pass + average NLL. Runs; loss = **3.6873** (correct random-init value).
-- Current code loops in Python over all ~228k bigrams — correct but far too slow to train.
-  Immediate next step is to vectorize into a single `X @ W` over the whole `[N,27]` matrix.
-  I already gave the nudges: stack one-hots (or `F.one_hot(torch.tensor(inp),27).float()`),
-  one matmul, row-softmax with `sum(dim=1, keepdim=True)`, then the **two-index gather** for
-  target probs (`probs[torch.arange(N), out]`) — I told him I'd hand over the gather syntax
-  when he reaches it, so don't pre-empt it.
-- NOT yet coded: the training loop (`loss.backward()` → update → reset grad); sampling from the net.
+- DONE + validated: forward pass + average NLL (loss 3.6873 at init, the correct random floor).
+- DONE himself: **vectorized** the forward pass — one-hot the whole `inp` list, single
+  `onehot @ weights`, row-softmax via `exp.sum(1, keepdim=True)`, and the **two-index gather**
+  `probs[torch.arange(len(probs)), out]` for target probs, `.mean()`. Nailed it from nudges;
+  the gather he wrote himself.
+- DONE himself: **gradient-descent loop** — `loss.backward()` → `with torch.no_grad(): weights -=
+  weights.grad * lr` → `weights.grad.zero_()`. Correct use of `no_grad` + in-place leaf update.
+- DONE himself: **sampling from the trained net** — start at `.` (0), one-hot → forward → softmax
+  → `torch.multinomial`, walk until it emits 0. Produces name-like samples.
+- OPEN — **lr too small:** loop uses `lr=0.1`, so after 10000 iters it only reached 2.5757.
+  Fix is one number: `lr=50` → ~2.46 in ~200 iters (matches the counts floor 2.4540). See the
+  shaky "learning-rate feel" item. He's going to make this change himself.
+- NOT yet coded: (a) **regularization** `+ alpha*(weights**2).mean()` (alpha~0.01) = the NN twin
+  of add-fake-counts smoothing; (b) the **equivalence check** `softmax(weights, dim=1)` vs the
+  counts-route `P` matrix (should nearly coincide after lr=50 training) — proves the net
+  rediscovers the counts.
 
 ## PyTorch syntax he now knows (don't re-explain unless asked)
 `torch.tensor` vs `torch.Tensor` (data vs shape — the footgun that gave him `[0,0,0,0,0]`),
 `F.one_hot(x, num_classes=)`, `.to(torch.float32)`, `torch.randn(...)` + `requires_grad=True`,
 `torch.exp`, `torch.log` (natural, float-only), `.shape`/`.ndim`, `reshape(1,-1)`/`unsqueeze`/
-`squeeze`, `@` matmul, `torch.sum`.
-Not yet introduced: `sum(dim=, keepdim=)`, the two-index gather, `.backward()`, `torch.no_grad()`,
-`.mean()`, and `torch.multinomial` in the net-sampling context.
+`squeeze`, `@` matmul, `torch.sum`, `sum(dim=, keepdim=)`, the **two-index gather**
+`probs[torch.arange(N), out]`, `.mean()`, `.backward()`, `torch.no_grad()` + in-place `weights -=`,
+`weights.grad.zero_()`, and `torch.multinomial` for sampling from the net.
+Not yet introduced: `torch.softmax` as a one-call op (he hand-rolls exp/normalize — fine),
+L2/regularization term.
 
 ## Next steps
-1. **Vectorize the forward pass** (active focus): replace the per-bigram loop with `X @ W` on the
-   full `[N,27]` matrix; row-softmax via `counts.sum(dim=1, keepdim=True)`; pull target probs with
-   the two-index gather `probs[torch.arange(N), out]`; `.mean()`. Hand him the gather syntax when
-   he hits it, not before.
-2. **Gradient-descent loop:** `loss.backward()` → `W.data += -lr * W.grad` (under `torch.no_grad()`)
-   → reset `W.grad`. Confirm loss falls toward ~2.45 and samples match the counts route. The
-   gradient-vanishing intuition (shaky item) becomes concrete here.
-3. Scoring in the counts route (Section 1) still pending — expect ~2.45.
-4. Not yet covered: smoothing (fake counts) ↔ L2 regularization on the net; sampling from the
-   trained net.
+1. **Fix the learning rate** (active): change `lr=0.1`→`50` in the loop, rerun ~200 iters,
+   confirm loss lands ~2.46 (≈ the counts floor 2.4540). Reinforces the "flat loss can mean
+   step-too-small, not done" lesson.
+2. **Equivalence check:** compare `torch.softmax(weights, dim=1)` (the NN's per-row next-char
+   distribution) against the counts-route `P` matrix — rows should nearly coincide. The visual
+   proof that gradient descent rediscovered the counts. (He asked what this meant on 2026-09-05;
+   mid-explanation — pick up here.)
+3. **Regularization:** add `+ alpha*(weights**2).mean()` (alpha~0.01) to the loss = the NN twin
+   of add-fake-counts smoothing; watch predictions get more uniform as alpha grows.
+4. **Scoring in the counts route (Section 1, `bigram.ipynb`)** still pending — expect ~2.45.
+   Reminder: include the ending `i.` bigram.
 
 ## Session log
 - 2026-07-15: Deep dive on the scoring half of Section 1 — why multiply (chain rule /
@@ -142,3 +158,22 @@ Not yet introduced: `sum(dim=, keepdim=)`, the two-index gather, `.backward()`, 
   `rand` for weights — same pure-stdlib inline-SVG recipe as the exp/log page; Gauss +
   Galton-board origin story). Left off ready to vectorize the loop, then wire up gradient
   descent.
+- 2026-09-05: **Review session — Section 2 is functionally complete.** Since 2026-08-26 he
+  independently finished all three "next steps": vectorized forward pass (single `onehot @
+  weights`, hand-wrote the two-index gather), the gradient-descent loop (`backward` →
+  `no_grad` in-place update → `grad.zero_()`), and sampling from the trained net (multinomial
+  walk). All structurally correct — no bugs. One real issue: `lr=0.1` left the loss plateaued
+  at 2.5757, which he mistook for converged. Verified by rerunning his exact code: counts
+  floor 2.4540; his lr=0.1 barely moves; lr=50/100it → 2.4729; lr=50/200it → 2.4624. Told him
+  to change the one number himself. Flagged the two remaining lecture-2 pieces: L2
+  regularization (= smoothing twin) and the `softmax(weights)` vs `P` equivalence check. He
+  asked what the equivalence check means — explained it with a live side-by-side (his counts
+  `P` row for 'a' vs `softmax(W)` after lr=50, matched to 2 decimals). He then asked the deep
+  lr questions ("how do you decide step size / know you're not overshooting / how many runs
+  without blowing up"). Built `llm_output/learning_rate_grok.html` (pure-stdlib inline SVG,
+  reusing the `build_exp_log_html.py` Plot toolkit; generator `.kiro/build_learning_rate_html.py`).
+  It uses exact GD on the toy bowl `L(w)=w²` (update factor `r=1-2·lr`) to show the four regimes
+  (crawl / smooth / overshoot-but-converge / blow-up), the loss-vs-iteration diagnostic table,
+  the lr-sweep finder (lecture-3 preview), lr decay, and the key grok: lr=0.1 vs 50 are both
+  "right" for different gradient scales → there's no universal lr, hence you probe. Forward
+  pointers left in: lr-finder (lec 3) and Adam (lec 4).

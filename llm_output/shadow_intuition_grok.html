@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Shadow: green line vs dotted line</title>
+<style>
+  :root{--ink:#23252b;--soft:#5b6270;--line:#e3e6ea;--bg:#fbfbfc;
+        --a:#d62728;--b:#8a6d3b;--proj:#2ca02c;--sun:#e8a90c;}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,'Segoe UI',Arial,sans-serif;line-height:1.6;color:var(--ink);
+       max-width:1000px;margin:0 auto;padding:30px 20px 90px;background:var(--bg)}
+  h1{font-size:25px;margin:0 0 4px}
+  h2{font-size:19px;margin:36px 0 6px;padding-top:12px;border-top:2px solid var(--line)}
+  p{margin:9px 0}
+  .lede{color:var(--soft);font-size:15px;margin-top:0}
+  code{background:#eef0f3;padding:1px 6px;border-radius:5px;font-size:.92em}
+  svg{max-width:100%;height:auto;touch-action:none;display:block;
+      border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:14px}
+  .readout{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;font-size:15px}
+  .chip{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff}
+  .chip b{font-size:20px}
+  .green{color:var(--proj)} .red{color:var(--a)} .sun{color:#b9820a}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .btn:hover{background:#f2f4f7}
+  .callout{border-left:4px solid var(--proj);background:#f1f8f0;padding:11px 15px;margin:16px 0;border-radius:0 8px 8px 0;font-size:14.5px}
+  .callout.d{border-left-color:#9aa0a8;background:#f4f5f6}
+  .keyrow{display:flex;gap:20px;flex-wrap:wrap;font-size:13.5px;color:var(--soft);margin-top:10px}
+  .sw{display:inline-block;width:22px;height:0;border-top-width:3px;border-top-style:solid;vertical-align:middle;margin-right:6px}
+  table.mini{border-collapse:collapse;font-size:14px;margin:6px 0}
+  table.mini td{padding:3px 12px 3px 0}
+</style>
+</head>
+<body>
+
+<h1>The shadow: which line are we measuring?</h1>
+<p class="lede"><b>B is the ground. A is a leaning pole. The sun is directly overhead.</b> Drag the top of the red pole and watch its shadow slide along the ground.</p>
+
+<div class="callout">
+  <b>The green line is the shadow — that's the answer.</b> The dotted line is just a ray of sunlight showing where the shadow ends. We read the <span class="green"><b>green</b></span>, never the dotted.
+</div>
+
+<svg id="stage" viewBox="0 0 760 440" xmlns="http://www.w3.org/2000/svg"></svg>
+
+<div class="readout">
+  <div class="chip">pole tip A = <b class="red" id="acoord"></b></div>
+  <div class="chip">shadow length (green) = <b class="green" id="shadow"></b></div>
+  <div class="chip">A&middot;B = |B| &times; shadow = <b id="dot"></b></div>
+</div>
+
+<div class="btns">
+  <button class="btn" data-p="lean">lean right (positive shadow)</button>
+  <button class="btn" data-p="up">straight up (no shadow)</button>
+  <button class="btn" data-p="back">lean left (negative shadow)</button>
+</div>
+
+<div class="keyrow">
+  <span><span class="sw" style="border-top-color:var(--a)"></span>A — the pole</span>
+  <span><span class="sw" style="border-top-color:var(--b)"></span>B — the ground</span>
+  <span><span class="sw" style="border-top-color:var(--proj)"></span>green shadow (what we measure)</span>
+  <span><span class="sw" style="border-top-color:var(--sun);border-top-style:dashed"></span>sunbeam (dotted — scaffolding only)</span>
+</div>
+
+<h2>Read it in this order</h2>
+<table class="mini">
+  <tr><td class="sun"><b>1. Sunbeam (dotted)</b></td><td>drops straight down from the pole's tip to the ground. Perpendicular = "straight-down light".</td></tr>
+  <tr><td class="green"><b>2. Shadow (green)</b></td><td>runs along the ground from the base of the pole to where the sunbeam lands. <b>This length is the measurement.</b></td></tr>
+  <tr><td><b>3. Dot product</b></td><td>= length of B &times; length of the green shadow.</td></tr>
+</table>
+
+<div class="callout d">
+  <b>Why the dotted line has to be perpendicular:</b> only straight-down light gives the pole's <em>true</em> reach along the ground. Tilt the light and the shadow would stretch or shrink dishonestly. Perpendicular = the fair measurement.
+</div>
+
+<div class="callout">
+  <b>The sign lives in the shadow.</b> Lean the pole toward B and the shadow falls on B's side (positive). Stand it straight up and there's no shadow (zero — this is what "perpendicular vectors have dot product 0" means). Lean it away and the shadow falls behind the origin, on the wrong side (negative).
+</div>
+
+<script>
+(function(){
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.getElementById("stage");
+  const W=760,H=440;
+  const ox=200, oy=300;      // origin (base of pole) on screen
+  const scale=42;            // px per unit
+  const Blen=5;              // B = (5,0), the ground vector length
+  let A={x:3, y:3.2};        // pole tip in grid units
+
+  const sx=gx=>ox+gx*scale, sy=gy=>oy-gy*scale;
+  const gx=px=>(px-ox)/scale, gy=py=>(oy-py)/scale;
+  function mk(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+
+  function defs(){
+    const d=mk("defs",{});
+    [["ar","var(--a)"],["ab","var(--b)"]].forEach(([id,c])=>{
+      const m=mk("marker",{id,markerWidth:10,markerHeight:10,refX:7,refY:3,orient:"auto",markerUnits:"strokeWidth"});
+      m.appendChild(mk("path",{d:"M0,0 L7,3 L0,6 Z",fill:c})); d.appendChild(m);
+    });
+    svg.appendChild(d);
+  }
+  defs();
+  const layer=mk("g",{}); svg.appendChild(layer);
+
+  function fmt(v){const r=Math.round(v*100)/100;return (Object.is(r,-0)?0:r).toString();}
+
+  function draw(){
+    layer.innerHTML="";
+    // sky + ground shading
+    layer.appendChild(mk("rect",{x:0,y:0,width:W,height:H,fill:"#fff"}));
+    layer.appendChild(mk("rect",{x:0,y:oy,width:W,height:H-oy,fill:"#f7f4ee"}));
+    layer.appendChild(mk("line",{x1:0,y1:oy,x2:W,y2:oy,stroke:"#d8cdb8","stroke-width":1}));
+
+    // sun
+    layer.appendChild(mk("circle",{cx:sx(A.x),cy:26,r:16,fill:"var(--sun)",opacity:0.9}));
+    layer.appendChild(mk("text",{x:sx(A.x),y:31,"font-size":11,fill:"#fff","text-anchor":"middle","font-weight":700})).textContent="\u2600";
+    layer.appendChild(mk("text",{x:sx(A.x)+24,y:30,"font-size":12,fill:"#b9820a"})).textContent="sun overhead";
+
+    // faint parallel sunbeams (vertical = perpendicular to the ground)
+    for(let gxv=-1;gxv<=6;gxv++){
+      layer.appendChild(mk("line",{x1:sx(gxv),y1:44,x2:sx(gxv),y2:oy,
+        stroke:"var(--sun)","stroke-width":1,"stroke-dasharray":"3,6",opacity:0.22}));
+    }
+
+    // ground vector B (arrow along +x)
+    layer.appendChild(mk("line",{x1:sx(0),y1:sy(0),x2:sx(Blen),y2:sy(0),
+      stroke:"var(--b)","stroke-width":3,"marker-end":"url(#ab)"}));
+    layer.appendChild(mk("text",{x:sx(Blen)+8,y:sy(0)+18,"font-size":13,fill:"var(--b)","font-weight":700})).textContent="B (the ground)";
+
+    // GREEN shadow: base of pole -> foot of sunbeam (foot x = A.x, on the ground)
+    layer.appendChild(mk("line",{x1:sx(0),y1:sy(0),x2:sx(A.x),y2:sy(0),
+      stroke:"var(--proj)","stroke-width":9,"stroke-linecap":"round",opacity:0.85}));
+
+    // dotted sunbeam from pole tip down to ground
+    layer.appendChild(mk("line",{x1:sx(A.x),y1:sy(A.y),x2:sx(A.x),y2:sy(0),
+      stroke:"var(--sun)","stroke-width":2,"stroke-dasharray":"5,4"}));
+
+    // right-angle tick at the foot (shows perpendicular)
+    const s=A.x>=0?1:-1;
+    layer.appendChild(mk("path",{d:`M ${sx(A.x)-s*10} ${sy(0)} L ${sx(A.x)-s*10} ${sy(0)-10} L ${sx(A.x)} ${sy(0)-10}`,
+      fill:"none",stroke:"#b9820a","stroke-width":1.2,opacity:0.8}));
+
+    // the pole A
+    layer.appendChild(mk("line",{x1:sx(0),y1:sy(0),x2:sx(A.x),y2:sy(A.y),
+      stroke:"var(--a)","stroke-width":3.5,"marker-end":"url(#ar)"}));
+    layer.appendChild(mk("text",{x:sx(A.x)+(A.x>=0?12:-12),y:sy(A.y)-6,"font-size":13,
+      fill:"var(--a)","font-weight":700,"text-anchor":A.x>=0?"start":"end"})).textContent="A (the pole)";
+
+    // labels for the two lines
+    layer.appendChild(mk("text",{x:sx(A.x/2),y:sy(0)+26,"font-size":13,fill:"var(--proj)",
+      "font-weight":700,"text-anchor":"middle"})).textContent="green shadow \u2192 measure THIS";
+    layer.appendChild(mk("text",{x:sx(A.x)+(A.x>=0?8:-8),y:sy(A.y/2),"font-size":11.5,fill:"#b9820a",
+      "text-anchor":A.x>=0?"start":"end"})).textContent="sunbeam (dotted)";
+
+    // draggable tip
+    const h=mk("circle",{cx:sx(A.x),cy:sy(A.y),r:9,fill:"var(--a)",stroke:"#fff","stroke-width":2,cursor:"grab"});
+    h.dataset.h="1"; layer.appendChild(h);
+
+    // readouts
+    document.getElementById("acoord").textContent=`(${fmt(A.x)}, ${fmt(A.y)})`;
+    document.getElementById("shadow").textContent=fmt(A.x);
+    const dot=Blen*A.x;
+    const de=document.getElementById("dot");
+    de.textContent=fmt(dot);
+    de.className = dot>1e-9?"green":(dot<-1e-9?"red":"");
+  }
+
+  function pt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
+    return p.matrixTransform(svg.getScreenCTM().inverse());}
+  let drag=false;
+  svg.addEventListener("pointerdown",e=>{
+    if(e.target.dataset&&e.target.dataset.h){drag=true;svg.setPointerCapture(e.pointerId);}
+  });
+  svg.addEventListener("pointermove",e=>{
+    if(!drag)return;const p=pt(e);
+    A={x:Math.max(-4,Math.min(6,gx(p.x))), y:Math.max(0.2,Math.min(3.6,gy(p.y)))};
+    draw();
+  });
+  svg.addEventListener("pointerup",()=>drag=false);
+  svg.addEventListener("pointerleave",()=>drag=false);
+
+  document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{
+    const p=b.dataset.p;
+    if(p==="lean")A={x:3,y:3};
+    else if(p==="up")A={x:0,y:3.4};
+    else A={x:-2.5,y:2.8};
+    draw();
+  });
+
+  draw();
+})();
+</script>
+</body>
+</html>

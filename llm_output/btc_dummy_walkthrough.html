@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B, T, C — built up from a dummy sentence</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161a22; --panel2:#1c212b; --ink:#eef1f5; --muted:#9aa6b6;
+    --B:#ff8f6b; --T:#5cb8ff; --C:#7ee787; --line:#2a3140; --accent:#c792ea;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1a2030,transparent),var(--bg);
+    color:var(--ink);font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;padding:34px 18px 90px}
+  .wrap{max-width:1000px;margin:0 auto}
+  h1{font-size:1.6rem;margin:0 0 2px;letter-spacing:.2px}
+  .sub{color:var(--muted);margin:0 0 22px;font-size:.95rem}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .B{color:var(--B)} .T{color:var(--T)} .C{color:var(--C)}
+
+  /* stepper controls */
+  .steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .steps button{background:var(--panel);color:var(--muted);border:1px solid var(--line);
+    padding:9px 14px;border-radius:10px;cursor:pointer;font-size:.9rem;transition:.15s}
+  .steps button:hover{border-color:#3a475c;color:var(--ink)}
+  .steps button.on{background:linear-gradient(180deg,#243044,#1b2432);color:#fff;
+    border-color:#4a6a95;box-shadow:0 0 0 1px #4a6a9555}
+
+  .stage{display:none;animation:fade .35s ease}
+  .stage.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:24px;margin:0 0 18px}
+  h2{font-size:1.18rem;margin:0 0 4px}
+  .tag{display:inline-block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--accent);border:1px solid #40324e;background:#221a2e;border-radius:999px;
+    padding:3px 10px;margin-bottom:12px}
+  p{margin:8px 0}
+  .fix{background:#2a2011;border:1px solid #5a4416;border-radius:10px;padding:10px 14px;
+    color:#ffd9a0;font-size:.92rem;margin-top:14px}
+  .ok{color:var(--C);font-weight:600}
+
+  /* char strip */
+  .strip{display:flex;flex-wrap:wrap;gap:4px;margin:14px 0}
+  .ch{width:34px;height:44px;display:flex;align-items:center;justify-content:center;
+    border-radius:8px;font-size:1.05rem;font-weight:600;
+    font-family:ui-monospace,monospace;border:1px solid var(--line)}
+  .space{color:#5b6675}
+  .g0{background:#3a2418;border-color:#5e3a24}
+  .g1{background:#183a2a;border-color:#245e40}
+  .g2{background:#182a3a;border-color:#24455e}
+  .g3{background:#2a1838;border-color:#452460}
+  .g4{background:#3a3418;border-color:#5e5424}
+  .g5{background:#1c3a18;border-color:#2e5e24}
+  .chunklabels{display:flex;gap:4px;flex-wrap:wrap;font-size:.7rem;color:var(--muted)}
+
+  /* grid */
+  .gridwrap{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin-top:10px}
+  table.grid{border-collapse:separate;border-spacing:6px}
+  table.grid td{width:74px;height:60px;text-align:center;border-radius:10px;
+    background:#131922;border:1px solid #283040;font-family:ui-monospace,monospace}
+  table.grid td.charcell{font-size:1.3rem;font-weight:700}
+  table.grid .rowlab{color:var(--B);font-weight:700;width:auto;background:none;border:none;
+    text-align:right;padding-right:6px;font-family:inherit}
+  table.grid .collab{color:var(--T);font-weight:700;background:none;border:none;height:auto;
+    font-family:inherit;font-size:.9rem}
+  .cellnum{color:var(--C);font-size:.82rem;line-height:1.35}
+
+  .legend{display:flex;gap:20px;flex-wrap:wrap;margin:16px 0 2px;font-size:.92rem}
+  .legend span{display:inline-flex;align-items:center;gap:8px}
+  .dot{width:14px;height:14px;border-radius:4px;display:inline-block}
+
+  .dictionary{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}
+  .dchip{background:#101720;border:1px solid #24405e;border-radius:10px;padding:8px 12px;
+    font-family:ui-monospace,monospace;font-size:.86rem}
+  .dchip b{color:#fff;font-size:1rem}
+  .dchip .nums{color:var(--C)}
+
+  /* depth / 3D */
+  .cube{position:relative;height:120px;margin:16px 0 4px}
+  .plane{position:absolute;width:220px;height:80px;border-radius:10px;border:1px solid #2f3a4a}
+  .p0{background:#0f2018;top:24px;left:44px;opacity:.55}
+  .p1{background:#12261c;top:12px;left:22px;opacity:.8}
+  .p2{background:#153020;top:0;left:0}
+
+  .readout{font-size:1.5rem;font-weight:800;text-align:center;margin:6px 0 4px;letter-spacing:1px}
+  .keygrid{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;margin-top:14px}
+  .keygrid b{white-space:nowrap;font-size:1rem}
+  .karp{background:var(--panel2);border:1px dashed #3a475c;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:.94rem}
+  .navbtns{display:flex;justify-content:space-between;margin-top:8px}
+  .navbtns button{background:#1d2634;color:#dfe6f0;border:1px solid #33425a;padding:10px 18px;
+    border-radius:10px;cursor:pointer;font-size:.92rem}
+  .navbtns button:disabled{opacity:.35;cursor:default}
+  .note{color:var(--muted);font-size:.88rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Building <span class="mono">(<span class="B">B</span>, <span class="T">T</span>, <span class="C">C</span>)</span> from a dummy sentence</h1>
+  <p class="sub mono">input = "this is a new poyem that a shake speaer wrote" &nbsp;·&nbsp; block size = 3</p>
+
+  <div class="steps">
+    <button data-go="0" class="on">1 · chunks</button>
+    <button data-go="1">2 · stack → batch</button>
+    <button data-go="2">3 · chars → numbers (C)</button>
+    <button data-go="3">4 · the shape</button>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage show" id="s0">
+    <div class="card">
+      <div class="tag">Stage 1</div>
+      <h2>Chop the text into <span style="color:var(--accent)">chunks</span> of 3</h2>
+      <p>Each colored group of 3 characters is one <b>chunk</b>. The chunk length (3) is the <b>block size</b>. Space is shown as <span class="mono space">·</span>.</p>
+      <div class="strip" id="strip1"></div>
+      <p class="ok">✔ Your slicing idea is exactly right.</p>
+      <div class="fix"><b>One fix:</b> the real code grabs chunks from <b>random spots</b> in the text (they can overlap), not by cutting cleanly in order. But for understanding the <i>shape</i>, this neat cut-every-3 picture is perfect.</div>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" id="s1">
+    <div class="card">
+      <div class="tag">Stage 2</div>
+      <h2>Stack a few chunks → that stack is a <span class="B">batch</span></h2>
+      <p>Take <b>2 chunks</b> (<span class="mono">"thi"</span> and <span class="mono">"s·i"</span>) and stack them into a grid. This whole grid is <b>one batch</b>.</p>
+      <div class="gridwrap">
+        <table class="grid">
+          <tr><td class="rowlab"></td><td class="collab">t0</td><td class="collab">t1</td><td class="collab">t2</td></tr>
+          <tr><td class="rowlab">chunk 0</td><td class="charcell">t</td><td class="charcell">h</td><td class="charcell">i</td></tr>
+          <tr><td class="rowlab">chunk 1</td><td class="charcell">s</td><td class="charcell space">·</td><td class="charcell">i</td></tr>
+        </table>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--B)"></span><b class="B">B = 2</b> → rows = how many chunks stacked</span>
+        <span><span class="dot" style="background:var(--T)"></span><b class="T">T = 3</b> → columns = position in the chunk</span>
+      </div>
+      <p class="note" style="margin-top:14px">Shape so far = <span class="mono">(<span class="B">B</span>,<span class="T">T</span>) = (2,3)</span>. Each cell holds <b>just one character</b>. There is <b>no C yet.</b></p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" id="s2">
+    <div class="card">
+      <div class="tag">Stage 3</div>
+      <h2>Replace each char with a vector → <span class="C">C</span> is born</h2>
+      <p>A net can't use the letter <span class="mono">'t'</span> directly. We describe each char with a <b>little list of numbers</b>. Let's use <b class="C">2 numbers per char</b> (C = 2):</p>
+      <div class="dictionary">
+        <div class="dchip"><b>t</b> → <span class="nums">[0.7, -1.2]</span></div>
+        <div class="dchip"><b>h</b> → <span class="nums">[0.1, 0.9]</span></div>
+        <div class="dchip"><b>i</b> → <span class="nums">[-0.4, 0.3]</span></div>
+        <div class="dchip"><b>s</b> → <span class="nums">[1.1, 0.0]</span></div>
+        <div class="dchip"><b>·</b> → <span class="nums">[0.2, -0.7]</span></div>
+      </div>
+      <p style="margin-top:16px">Now every cell holds a <b>stack of 2 numbers</b> — that stack going "into the page" is the <b class="C">channel</b> dimension:</p>
+      <div class="gridwrap">
+        <table class="grid">
+          <tr><td class="rowlab"></td><td class="collab">t0</td><td class="collab">t1</td><td class="collab">t2</td></tr>
+          <tr><td class="rowlab">chunk 0</td>
+            <td><span class="cellnum">0.7<br>-1.2</span></td>
+            <td><span class="cellnum">0.1<br>0.9</span></td>
+            <td><span class="cellnum">-0.4<br>0.3</span></td></tr>
+          <tr><td class="rowlab">chunk 1</td>
+            <td><span class="cellnum">1.1<br>0.0</span></td>
+            <td><span class="cellnum">0.2<br>-0.7</span></td>
+            <td><span class="cellnum">-0.4<br>0.3</span></td></tr>
+        </table>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--C)"></span><b class="C">C = 2</b> → depth = how many numbers describe each character</span>
+      </div>
+      <div class="fix" style="background:#101f2b;border-color:#24455e;color:#bfe0ff">
+        <b>The key moment:</b> C did not exist at the raw-character grid. It is <b>born here</b>, the instant each character turns into a vector of numbers (an embedding).
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" id="s3">
+    <div class="card">
+      <div class="tag">Stage 4</div>
+      <h2>Read the final shape</h2>
+      <div class="readout mono">(<span class="B">B</span>, <span class="T">T</span>, <span class="C">C</span>) = (<span class="B">2</span>, <span class="T">3</span>, <span class="C">2</span>)</div>
+      <p style="text-align:center" class="note">"2 chunks × 3 positions each × 2 numbers per character"</p>
+      <div class="keygrid">
+        <b class="B">B = 2</b><span>how many chunks are stacked & processed in parallel (they never talk to each other — stacking is only for GPU speed)</span>
+        <b class="T">T = 3</b><span>which position inside a chunk (t0, t1, t2). Called <i>time</i> because a sequence unfolds one token per tick. = block size.</span>
+        <b class="C">C = 2</b><span>how many numbers describe the character at each position. Borrowed from images: RGB = 3 color channels.</span>
+      </div>
+      <div class="karp">
+        <b>Straight to Karpathy's toy line</b> <span class="mono">B,T,C = 4,8,2</span> (@43:21):<br>
+        &nbsp;• he stacks <b class="B">4</b> chunks &nbsp;(we did 2)<br>
+        &nbsp;• each chunk is <b class="T">8</b> chars long &nbsp;(we did 3)<br>
+        &nbsp;• each char = <b class="C">2</b> numbers &nbsp;(same as us)<br>
+        Only the numbers differ — the <b>meaning is identical.</b>
+      </div>
+    </div>
+  </div>
+
+  <div class="navbtns">
+    <button id="prev" disabled>← back</button>
+    <button id="next">next →</button>
+  </div>
+</div>
+
+<script>
+  // Stage 1 char strip build
+  const text = "this is a new poyem that a shake speaer wrote";
+  const strip = document.getElementById('strip1');
+  const palette = ['g0','g1','g2','g3','g4','g5'];
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    const div=document.createElement('div');
+    const grp=Math.floor(i/3)%palette.length;
+    div.className='ch '+palette[grp]+(c===' '?' space':'');
+    div.textContent = c===' ' ? '·' : c;
+    strip.appendChild(div);
+  }
+
+  // stepper
+  const stages=[...document.querySelectorAll('.stage')];
+  const btns=[...document.querySelectorAll('.steps button')];
+  const prev=document.getElementById('prev'), next=document.getElementById('next');
+  let cur=0;
+  function show(i){
+    cur=Math.max(0,Math.min(stages.length-1,i));
+    stages.forEach((s,k)=>s.classList.toggle('show',k===cur));
+    btns.forEach((b,k)=>b.classList.toggle('on',k===cur));
+    prev.disabled=cur===0; next.disabled=cur===stages.length-1;
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(+b.dataset.go)));
+  prev.addEventListener('click',()=>show(cur-1));
+  next.addEventListener('click',()=>show(cur+1));
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight')show(cur+1);
+    if(e.key==='ArrowLeft')show(cur-1);
+  });
+</script>
+</body>
+</html>

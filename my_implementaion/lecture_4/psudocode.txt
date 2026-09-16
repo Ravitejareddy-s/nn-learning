@@ -1,0 +1,46 @@
+
+to start with we will have 
+input = ['...','..e',....]
+output = ['e','m',.....]
+
+stoi = [[0,0,0],[0,0,5],.....] -- size= x*3
+
+# intializing values 
+random = torch.random(27,2) --> no need to change this 
+
+# tanh layer 
+tanh_nn_weights = torch.random(6*n) --> n is no of nurons you want in the tanh layer
+tahn_bias = torch.random(n,1) --> we can just remove this bias because the batch norm will take care of it 
+
+running_mean=torch.zeros(1,no of nurons in tanh)
+running_std=torch.ones(1,no of nurons in tanh ) 
+btach_norm_weights = torch.ones(1,n)
+batch_norm_bias = torch.zeros(1,n)
+
+#logits part 
+logits_weights = torch.randon(n*27) * 0.01 --> this should be as close to zero as possible intially
+new_bias = torch.randn(27,1) --> its better to set it as 0's intially torch.zero(27,1)
+
+
+
+emb = random[stoi] -- if you take the first element in the first array of first array in stoi its 0 so embedings will replace that with the first row of the random and do that same for all 
+emb = emb[1st col] + which is append/concat emb[2nd col] + emb[3nd col] 
+now emb will be in the shape of 6*x
+
+#adding the batch norm before the tanh 
+tanh1 = emb@tanh_nn_weights -- shape will be x*n
+
+m = tanh1.mean(over columns not rows)
+std = tanh1.std(over columns not rows)
+bn = btach_norm_weights*((tanh1-m)/std)+batch_norm_bias
+
+rnuning_mean = running_mean*0.99 + m*0.01
+rnuning_std = running_std*0.99 + std*0.01
+
+tanh3 = torch.tanh(bn) 
+
+
+logits = tanh3@logits_weights + new_bias
+
+#soft max part this is the regular drill that is done in the lecture 2
+loss = -1*sum(torch.log(torch.prob(torch.exp(logits))))

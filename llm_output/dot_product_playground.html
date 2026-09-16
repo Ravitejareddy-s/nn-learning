@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dot Product Playground</title>
+<style>
+  :root{
+    --ink:#23252b;--soft:#5b6270;--line:#e3e6ea;--bg:#fbfbfc;
+    --a:#d62728;      /* vector A - red */
+    --b:#1f77b4;      /* vector B - blue */
+    --proj:#2ca02c;   /* projection - green */
+    --panel:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{font-family:system-ui,'Segoe UI',Arial,sans-serif;line-height:1.6;color:var(--ink);
+       max-width:1080px;margin:0 auto;padding:30px 20px 90px;background:var(--bg)}
+  h1{font-size:26px;line-height:1.25;margin:0 0 4px}
+  h2{font-size:19px;margin:40px 0 8px;padding-top:14px;border-top:2px solid var(--line)}
+  p{margin:9px 0}
+  .lede{color:var(--soft);font-size:15px;margin-top:0}
+  code{background:#eef0f3;padding:1px 6px;border-radius:5px;font-size:.92em}
+  .stage{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;margin-top:18px}
+  .left{flex:1 1 460px;min-width:340px}
+  .right{flex:1 1 380px;min-width:320px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;align-items:center}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;
+       padding:6px 12px;font-size:13px;cursor:pointer;transition:.12s}
+  .btn:hover{background:#f2f4f7}
+  .btn.on{border-color:var(--ink);font-weight:600}
+  .btn.a.on{border-color:var(--a);color:var(--a);background:#fdecec}
+  .btn.b.on{border-color:var(--b);color:var(--b);background:#eaf3fb}
+  .hint{color:var(--soft);font-size:13px;margin:6px 0 0}
+  svg{max-width:100%;height:auto;touch-action:none;display:block;
+      border:1px solid var(--line);border-radius:12px;background:#fff}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .card h3{margin:0 0 10px;font-size:14px;letter-spacing:.03em;text-transform:uppercase;color:var(--soft)}
+  .steps{font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;font-size:15px;line-height:1.9}
+  .steps .lbl{color:var(--soft)}
+  .steps .res{font-weight:700}
+  .va{color:var(--a);font-weight:700}
+  .vb{color:var(--b);font-weight:700}
+  .vp{color:var(--proj);font-weight:700}
+  .bignum{font-size:30px;font-weight:800;font-family:'SF Mono',ui-monospace,Menlo,monospace}
+  .verdict{display:inline-block;padding:3px 12px;border-radius:20px;font-weight:700;font-size:14px;color:#fff}
+  .callout{border-left:4px solid var(--b);background:#f2f7fc;padding:11px 15px;margin:14px 0;border-radius:0 8px 8px 0;font-size:14.5px}
+  .callout.g{border-left-color:var(--proj);background:#f1f8f0}
+  table.mini{border-collapse:collapse;font-size:14px;margin:4px 0}
+  table.mini td{padding:2px 10px 2px 0}
+  .keyrow{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--soft);margin-top:8px}
+  .sw{display:inline-block;width:22px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+
+<h1>Dot Product Playground</h1>
+<p class="lede">Drag the two arrow tips on the grid (or click an empty cell to move the active vector). Everything below recomputes live — the arithmetic, the angle, and the "shadow" picture of what the dot product actually measures.</p>
+
+<div class="stage">
+  <div class="left">
+    <div class="controls">
+      <span style="font-size:13px;color:var(--soft)">Click moves:</span>
+      <button class="btn a on" id="pickA">vector A</button>
+      <button class="btn b" id="pickB">vector B</button>
+      <button class="btn" id="snap">snap: integers</button>
+      <button class="btn" id="showProj">shadow: on</button>
+    </div>
+    <div class="controls">
+      <span style="font-size:13px;color:var(--soft)">presets:</span>
+      <button class="btn" data-preset="same">parallel</button>
+      <button class="btn" data-preset="perp">perpendicular</button>
+      <button class="btn" data-preset="opp">opposite</button>
+      <button class="btn" data-preset="reset">reset</button>
+    </div>
+    <svg id="grid" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="keyrow">
+      <span><span class="sw" style="background:var(--a)"></span>A (drag the red dot)</span>
+      <span><span class="sw" style="background:var(--b)"></span>B (drag the blue dot)</span>
+      <span><span class="sw" style="background:var(--proj)"></span>A's shadow on B</span>
+    </div>
+    <p class="hint">Tip: make the angle wider than 90&deg; and watch the dot product flip negative — the shadow lands on the <em>opposite</em> side of B.</p>
+  </div>
+
+  <div class="right">
+    <div class="card">
+      <h3>Step 1 &mdash; multiply matching components, add them</h3>
+      <div class="steps" id="algebra"></div>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <h3>The dot product</h3>
+      <div class="bignum" id="bigResult"></div>
+      <div style="margin-top:10px"><span class="verdict" id="verdict"></span></div>
+      <div class="hint" id="verdictWhy" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h3>Step 2 &mdash; the same number, seen geometrically</h3>
+      <div class="steps" id="geom"></div>
+    </div>
+
+    <div class="card">
+      <h3>Step 3 &mdash; the shadow (projection)</h3>
+      <div class="steps" id="proj"></div>
+    </div>
+  </div>
+</div>
+
+<h2>What am I actually looking at?</h2>
+<p>The dot product answers one question: <b>how much do these two arrows point the same way?</b> There are three equal ways to compute it, and the playground shows all three agreeing on the same number.</p>
+
+<div class="callout">
+  <b>The algebra view (Step 1):</b> line up the two vectors' components, multiply the matching ones, add. <code>A&middot;B = ax&middot;bx + ay&middot;by</code>. That's it — no trig, just multiply-and-add. This is the version you'll write in code a thousand times.
+</div>
+
+<div class="callout">
+  <b>The angle view (Step 2):</b> the exact same number equals <code>|A|&middot;|B|&middot;cos&theta;</code>, where &theta; is the angle between the arrows. So the dot product secretly carries the angle. If you already know both lengths and the dot product, you can recover the angle — that's how similarity gets measured everywhere in ML (cosine similarity is literally this, with the lengths divided out).
+</div>
+
+<div class="callout g">
+  <b>The shadow view (Step 3):</b> shine a light straight down onto B and look at the shadow A casts along B. The <em>length</em> of that shadow is <code>|A|cos&theta;</code>. Multiply it by <code>|B|</code> and you get the dot product again. This is why the sign matters:
+  <table class="mini" style="margin-top:8px">
+    <tr><td><b>angle &lt; 90&deg;</b></td><td>shadow points the same way as B</td><td>dot <b>&gt; 0</b></td></tr>
+    <tr><td><b>angle = 90&deg;</b></td><td>no shadow at all</td><td>dot <b>= 0</b></td></tr>
+    <tr><td><b>angle &gt; 90&deg;</b></td><td>shadow points opposite to B</td><td>dot <b>&lt; 0</b></td></tr>
+  </table>
+</div>
+
+<p style="color:var(--soft);font-size:13px;margin-top:26px">Everything here is computed by the page from the two points you place — the grid coordinates feed straight into the formulas, so the numbers are exact, not illustrative.</p>
+
+<script>
+(function(){
+  "use strict";
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("grid");
+  const SIZE = 520, R = 8;           // grid spans -8..8 in both axes
+  const cx = SIZE/2, cy = SIZE/2;
+  const scale = (SIZE/2 - 24) / R;   // px per unit
+
+  // state
+  let A = {x:4, y:2};
+  let B = {x:1, y:3};
+  let active = "A";
+  let snap = true;
+  let showProj = true;
+
+  // coord transforms (grid -> screen)
+  const sx = gx => cx + gx*scale;
+  const sy = gy => cy - gy*scale;
+  // screen -> grid
+  const gx = px => (px - cx)/scale;
+  const gy = py => (cy - py)/scale;
+
+  function mk(tag, attrs){
+    const el = document.createElementNS(SVG_NS, tag);
+    for(const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  // ---- static layer: grid + axes (built once) ----
+  function buildGrid(){
+    const g = mk("g", {});
+    for(let i=-R;i<=R;i++){
+      g.appendChild(mk("line",{x1:sx(i),y1:sy(-R),x2:sx(i),y2:sy(R),
+        stroke:(i===0?"#c2c7cf":"#eef0f3"),"stroke-width":(i===0?1.4:1)}));
+      g.appendChild(mk("line",{x1:sx(-R),y1:sy(i),x2:sx(R),y2:sy(i),
+        stroke:(i===0?"#c2c7cf":"#eef0f3"),"stroke-width":(i===0?1.4:1)}));
+    }
+    // axis ticks numbers
+    for(let i=-R;i<=R;i+=2){
+      if(i===0) continue;
+      g.appendChild(mk("text",{x:sx(i),y:sy(0)+14,"font-size":10,fill:"#9aa0a8","text-anchor":"middle"})).textContent=i;
+      g.appendChild(mk("text",{x:sx(0)-8,y:sy(i)+3.5,"font-size":10,fill:"#9aa0a8","text-anchor":"end"})).textContent=i;
+    }
+    svg.appendChild(g);
+  }
+
+  // arrow marker defs
+  function buildDefs(){
+    const defs = mk("defs",{});
+    [["arrA","var(--a)"],["arrB","var(--b)"]].forEach(([id,col])=>{
+      const m = mk("marker",{id:id,markerWidth:10,markerHeight:10,refX:7,refY:3,orient:"auto",markerUnits:"strokeWidth"});
+      m.appendChild(mk("path",{d:"M0,0 L7,3 L0,6 Z",fill:col}));
+      defs.appendChild(m);
+    });
+    svg.appendChild(defs);
+  }
+
+  // dynamic layer
+  const dyn = mk("g",{});
+  buildDefs();
+  buildGrid();
+  svg.appendChild(dyn);
+
+  function round(v){ return Math.round(v*100)/100; }
+  function fmt(v){ // tidy number for display
+    const r = Math.round(v*100)/100;
+    return (Object.is(r,-0)?0:r).toString();
+  }
+
+  function draw(){
+    dyn.innerHTML = "";
+
+    const dot = A.x*B.x + A.y*B.y;
+    const magA = Math.hypot(A.x,A.y);
+    const magB = Math.hypot(B.x,B.y);
+
+    // ---- projection geometry (A's shadow on B) ----
+    if(showProj && magB > 1e-9){
+      const s = dot/(magB*magB);          // scalar so that s*B is the foot of perpendicular
+      const foot = {x:s*B.x, y:s*B.y};
+      // highlighted shadow segment along B, from origin to foot
+      dyn.appendChild(mk("line",{x1:sx(0),y1:sy(0),x2:sx(foot.x),y2:sy(foot.y),
+        stroke:"var(--proj)","stroke-width":7,"stroke-linecap":"round",opacity:0.35}));
+      // dashed perpendicular from A tip down to foot
+      dyn.appendChild(mk("line",{x1:sx(A.x),y1:sy(A.y),x2:sx(foot.x),y2:sy(foot.y),
+        stroke:"var(--proj)","stroke-width":1.4,"stroke-dasharray":"5,4",opacity:0.9}));
+    }
+
+    // ---- angle arc between A and B ----
+    if(magA>1e-9 && magB>1e-9){
+      const aAng = Math.atan2(A.y,A.x), bAng = Math.atan2(B.y,B.x);
+      const rr = 34;
+      const largeArc = 0;
+      let a0 = aAng, a1 = bAng;
+      // draw shortest arc
+      let diff = a1-a0;
+      while(diff> Math.PI) diff-=2*Math.PI;
+      while(diff<-Math.PI) diff+=2*Math.PI;
+      a1 = a0+diff;
+      const p0 = {x:cx+rr*Math.cos(a0), y:cy-rr*Math.sin(a0)};
+      const p1 = {x:cx+rr*Math.cos(a1), y:cy-rr*Math.sin(a1)};
+      const sweep = diff<0 ? 1 : 0;
+      dyn.appendChild(mk("path",{d:`M ${p0.x} ${p0.y} A ${rr} ${rr} 0 ${largeArc} ${sweep} ${p1.x} ${p1.y}`,
+        fill:"none",stroke:"#8a8a8a","stroke-width":1.4}));
+    }
+
+    // ---- vectors ----
+    dyn.appendChild(mk("line",{x1:sx(0),y1:sy(0),x2:sx(B.x),y2:sy(B.y),
+      stroke:"var(--b)","stroke-width":3,"marker-end":"url(#arrB)"}));
+    dyn.appendChild(mk("line",{x1:sx(0),y1:sy(0),x2:sx(A.x),y2:sy(A.y),
+      stroke:"var(--a)","stroke-width":3,"marker-end":"url(#arrA)"}));
+
+    // labels
+    dyn.appendChild(mk("text",{x:sx(A.x)+ (A.x>=0?10:-10),y:sy(A.y)-8,"font-size":14,
+      fill:"var(--a)","font-weight":700,"text-anchor":A.x>=0?"start":"end"})).textContent=`A (${fmt(A.x)}, ${fmt(A.y)})`;
+    dyn.appendChild(mk("text",{x:sx(B.x)+ (B.x>=0?10:-10),y:sy(B.y)-8,"font-size":14,
+      fill:"var(--b)","font-weight":700,"text-anchor":B.x>=0?"start":"end"})).textContent=`B (${fmt(B.x)}, ${fmt(B.y)})`;
+
+    // draggable handles
+    const hA = mk("circle",{cx:sx(A.x),cy:sy(A.y),r:8,fill:"var(--a)",stroke:"#fff","stroke-width":2,cursor:"grab"});
+    hA.dataset.v="A";
+    const hB = mk("circle",{cx:sx(B.x),cy:sy(B.y),r:8,fill:"var(--b)",stroke:"#fff","stroke-width":2,cursor:"grab"});
+    hB.dataset.v="B";
+    dyn.appendChild(hA); dyn.appendChild(hB);
+
+    updatePanels(dot,magA,magB);
+  }
+
+  function updatePanels(dot,magA,magB){
+    // Step 1 algebra
+    document.getElementById("algebra").innerHTML =
+      `<div><span class="lbl">A&middot;B = </span>ax&middot;bx + ay&middot;by</div>`+
+      `<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = (<span class="va">${fmt(A.x)}</span>)(<span class="vb">${fmt(B.x)}</span>) + (<span class="va">${fmt(A.y)}</span>)(<span class="vb">${fmt(B.y)}</span>)</div>`+
+      `<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = ${fmt(A.x*B.x)} + ${fmt(A.y*B.y)}</div>`+
+      `<div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = <span class="res">${fmt(dot)}</span></div>`;
+
+    // big result + verdict
+    document.getElementById("bigResult").textContent = `A\u00B7B = ${fmt(dot)}`;
+    const v = document.getElementById("verdict");
+    const why = document.getElementById("verdictWhy");
+    if(Math.abs(dot) < 1e-9){
+      v.textContent="perpendicular (90\u00B0)"; v.style.background="#7a7f87";
+      why.textContent="The arrows meet at a right angle — neither points along the other, so the shadow has zero length.";
+    } else if(dot>0){
+      v.textContent="acute (< 90\u00B0)"; v.style.background="var(--proj)";
+      why.textContent="They lean the same way, so the shadow lands on B's own side — the product is positive.";
+    } else {
+      v.textContent="obtuse (> 90\u00B0)"; v.style.background="var(--a)";
+      why.textContent="They lean opposite ways, so the shadow falls behind the origin — the product goes negative.";
+    }
+
+    // Step 2 geometry
+    let angDeg = "\u2014", cosv = "\u2014";
+    if(magA>1e-9 && magB>1e-9){
+      const c = Math.max(-1,Math.min(1, dot/(magA*magB)));
+      cosv = fmt(c);
+      angDeg = fmt(Math.acos(c)*180/Math.PI);
+    }
+    document.getElementById("geom").innerHTML =
+      `<div><span class="lbl">|A| = </span>&radic;(${fmt(A.x)}&sup2; + ${fmt(A.y)}&sup2;) = <span class="va">${fmt(magA)}</span></div>`+
+      `<div><span class="lbl">|B| = </span>&radic;(${fmt(B.x)}&sup2; + ${fmt(B.y)}&sup2;) = <span class="vb">${fmt(magB)}</span></div>`+
+      `<div><span class="lbl">cos&theta; = </span>A&middot;B / (|A||B|) = ${fmt(dot)} / ${fmt(magA*magB)} = ${cosv}</div>`+
+      `<div><span class="lbl">&theta; = </span><span class="res">${angDeg}&deg;</span></div>`+
+      `<div style="margin-top:6px"><span class="lbl">check: </span>|A||B|cos&theta; = ${fmt(magA)} &middot; ${fmt(magB)} &middot; ${cosv} = <span class="res">${fmt(magA*magB*(cosv==="\u2014"?0:parseFloat(cosv)))}</span></div>`;
+
+    // Step 3 projection
+    let scalarProj = "\u2014";
+    if(magB>1e-9) scalarProj = fmt(dot/magB);
+    document.getElementById("proj").innerHTML =
+      `<div><span class="lbl">shadow length of A on B</span></div>`+
+      `<div>&nbsp;&nbsp;= A&middot;B / |B| = ${fmt(dot)} / ${fmt(magB)} = <span class="vp">${scalarProj}</span></div>`+
+      `<div style="margin-top:6px"><span class="lbl">so </span>A&middot;B = |B| &times; shadow = ${fmt(magB)} &times; ${scalarProj} = <span class="res">${fmt(dot)}</span></div>`+
+      `<div class="hint" style="margin-top:6px">A negative shadow means it points opposite to B.</div>`;
+  }
+
+  // ---- interaction ----
+  function clampSnap(g){
+    let x = Math.max(-R,Math.min(R,g.x));
+    let y = Math.max(-R,Math.min(R,g.y));
+    if(snap){ x = Math.round(x); y = Math.round(y); }
+    return {x,y};
+  }
+  function svgPoint(evt){
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    const m = svg.getScreenCTM().inverse();
+    const p = pt.matrixTransform(m);
+    return p;
+  }
+
+  let dragging = null;
+  svg.addEventListener("pointerdown", e=>{
+    const t = e.target;
+    if(t.dataset && t.dataset.v){
+      dragging = t.dataset.v;
+      svg.setPointerCapture(e.pointerId);
+    } else {
+      // click empty space -> move active vector there
+      const p = svgPoint(e);
+      const g = clampSnap({x:gx(p.x), y:gy(p.y)});
+      if(active==="A") A=g; else B=g;
+      draw();
+    }
+  });
+  svg.addEventListener("pointermove", e=>{
+    if(!dragging) return;
+    const p = svgPoint(e);
+    const g = clampSnap({x:gx(p.x), y:gy(p.y)});
+    if(dragging==="A") A=g; else B=g;
+    draw();
+  });
+  svg.addEventListener("pointerup", e=>{ dragging=null; });
+  svg.addEventListener("pointerleave", e=>{ dragging=null; });
+
+  // ---- buttons ----
+  const pickA=document.getElementById("pickA"), pickB=document.getElementById("pickB");
+  pickA.onclick=()=>{active="A";pickA.classList.add("on");pickB.classList.remove("on");};
+  pickB.onclick=()=>{active="B";pickB.classList.add("on");pickA.classList.remove("on");};
+  const snapBtn=document.getElementById("snap");
+  snapBtn.onclick=()=>{snap=!snap;snapBtn.textContent="snap: "+(snap?"integers":"free");
+    if(snap){A=clampSnap(A);B=clampSnap(B);} draw();};
+  const projBtn=document.getElementById("showProj");
+  projBtn.onclick=()=>{showProj=!showProj;projBtn.textContent="shadow: "+(showProj?"on":"off");draw();};
+
+  document.querySelectorAll("[data-preset]").forEach(btn=>{
+    btn.onclick=()=>{
+      const p=btn.dataset.preset;
+      if(p==="same"){A={x:4,y:2};B={x:2,y:1};}
+      else if(p==="perp"){A={x:3,y:2};B={x:-2,y:3};}
+      else if(p==="opp"){A={x:3,y:2};B={x:-3,y:-2};}
+      else {A={x:4,y:2};B={x:1,y:3};}
+      draw();
+    };
+  });
+
+  draw();
+})();
+</script>
+</body>
+</html>

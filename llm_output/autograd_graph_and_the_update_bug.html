@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The autograd graph & why your update loop breaks</title>
+<style>
+:root{--ink:#23252b;--soft:#5b6270;--line:#e3e6ea;--accent:#1f77b4;--green:#2ca02c;--red:#d62728;--orange:#e8820c;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{font-family:system-ui,'Segoe UI',Arial,sans-serif;line-height:1.62;color:var(--ink);max-width:940px;margin:0 auto;padding:34px 22px 90px;background:#fbfbfc}
+h1{font-size:26px;line-height:1.25;margin:0 0 6px}
+h2{font-size:20px;margin:46px 0 6px;padding-top:14px;border-top:2px solid var(--line)}
+h3{font-size:15px;margin:22px 0 4px;color:var(--soft)}
+p{margin:10px 0}
+a{color:var(--accent)}
+.lede{color:var(--soft);font-size:15px;margin-top:0}
+code{background:#eef0f3;padding:1px 6px;border-radius:5px;font-size:.9em;font-family:var(--mono)}
+pre{background:#1e2127;color:#e6e6e6;padding:14px 16px;border-radius:10px;overflow:auto;font-size:12.5px;line-height:1.5;font-family:var(--mono)}
+pre .c{color:#7f8894}.pre .k{color:#e6c07b}
+pre b.bad{color:#ff7b72;font-weight:700}
+pre b.good{color:#7ee787;font-weight:700}
+.callout{border-left:4px solid var(--accent);background:#f2f7fc;padding:12px 16px;margin:18px 0;border-radius:0 8px 8px 0}
+.keep{border-left:4px solid var(--green);background:#f1f8f0}
+.warn{border-left:4px solid var(--red);background:#fdeeee}
+.origin{border-left:4px solid var(--orange);background:#fdf5ec}
+.callout b{color:var(--ink)}
+.big{font-size:16px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--accent);padding:2px 9px;border-radius:20px;margin-bottom:4px}
+.tag.g{background:var(--green)}.tag.o{background:var(--orange)}.tag.r{background:var(--red)}
+.cap{color:var(--soft);font-size:13.5px;text-align:center;max-width:800px;margin:8px auto 0}
+ul{margin:8px 0 8px 2px;padding-left:22px}li{margin:5px 0}
+/* ---- graph node chips ---- */
+.g{display:flex;flex-wrap:wrap;align-items:center;gap:5px;justify-content:center;margin:16px 0 4px}
+.nd{display:inline-flex;flex-direction:column;border-radius:9px;overflow:hidden;border:2px solid #c9ccd2;background:#fff;min-width:58px}
+.nd .nm{font-weight:700;padding:3px 9px;text-align:center;font-family:var(--mono);font-size:12px}
+.nd .cells{display:flex;border-top:1px solid #e3e6ea;font-size:10.5px}
+.nd .cells span{padding:2px 7px;flex:1;text-align:center;color:var(--soft);white-space:nowrap}
+.nd .cells .gv{border-left:1px solid #e3e6ea}
+.val .nm{background:#f4f5f7;color:#5b6270}
+.leaf{border-color:var(--accent)}.leaf .nm{background:#eaf2fb;color:var(--accent)}
+.const{border-color:#d7dae0;border-style:dashed}.const .nm{color:#8a8a8a;background:#fafbfc}
+.loss{border-color:var(--green)}.loss .nm{background:#eef7ea;color:var(--green)}
+.bad{border-color:var(--red)}.bad .nm{background:#fbeaea;color:var(--red)}
+.op{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 8px;border-radius:16px;background:#3a3f4a;color:#fff;font-size:12px;font-weight:700;font-family:var(--mono)}
+.ar{color:#aeb2b9;font-size:17px;font-weight:700}
+.lbl{font-size:11px;color:var(--soft);font-family:var(--mono)}
+.pointer{display:inline-block;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--red);border:2px dashed var(--red);border-radius:8px;padding:1px 9px;background:#fff}
+.pointer.ok{color:var(--accent);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:14px 0}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left}
+th{background:#f4f5f7;font-weight:700}td code{font-size:12px}
+.yes{color:var(--green);font-weight:700}.no{color:var(--red);font-weight:700}
+.two{display:flex;gap:16px;flex-wrap:wrap}.two>div{flex:1;min-width:280px}
+.btnrow{display:flex;gap:8px;align-items:center;margin:14px 0 6px;flex-wrap:wrap}
+button{font:inherit;font-size:13px;padding:6px 14px;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}
+button.sec{background:#fff;color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.stepbox{border:1px solid var(--line);border-radius:12px;padding:8px 10px 14px;background:#fff}
+.stepcap{font-size:13.5px;color:var(--ink);min-height:40px;margin:6px 4px}
+.hidden{display:none}
+.mut{font-size:11px;font-family:var(--mono);color:#8a8a8a}
+</style></head><body>
+
+<h1>The autograd graph, and why your training loop breaks at line&nbsp;2</h1>
+<p class="lede">You asked three things: (1) show me the graph like Karpathy's, (2) why does my code build the <i>wrong</i> graph, and (3) I thought <code>w = w + x</code> and <code>w += x</code> were the same — and what is this <code>no_grad</code>? Answers below, with pictures, and every claim checked against real PyTorch output.</p>
+
+<div class="callout"><span class="tag">the whole thing in one line</span>
+<p class="big" style="margin:2px 0 0"><b>The line <code>weights = weights - (weights.grad * 0.01)</code> peels the name <code>weights</code> off your trainable leaf and sticks it on a brand-new node <i>inside</i> the graph.</b> After that, <code>weights</code> is no longer a leaf, so <code>backward()</code> never fills its <code>.grad</code> — it stays <code>None</code>, and <code>weights.grad.zero_()</code> crashes on the very first pass.</p></div>
+
+<h2>1. Recap: what a graph node even is</h2>
+<p>In <a href="https://www.youtube.com/watch?v=VMj-3S1tku0">lecture 1</a> Karpathy drew every <code>Value</code> as a box holding two numbers — its <b>data</b> (the value going <i>forward</i>) and its <b>grad</b> (how much the final loss moves if you nudge this value, filled in going <i>backward</i>). Operations are the little pills between boxes. (Source: <a href="https://github.com/karpathy/micrograd">karpathy/micrograd</a>.)</p>
+
+<div class="g">
+  <span class="nd leaf"><span class="nm">a</span><span class="cells"><span>data 3.0</span><span class="gv">grad&nbsp;-2.0</span></span></span>
+  <span class="ar">&nbsp;</span>
+  <span class="op">&times;</span>
+  <span class="ar">&rarr;</span>
+  <span class="nd val"><span class="nm">c</span><span class="cells"><span>data -6.0</span><span class="gv">grad 1.0</span></span></span>
+  <span class="ar">&larr;&nbsp;grad flows back</span>
+</div>
+<div class="g" style="margin-top:0">
+  <span class="nd leaf"><span class="nm">b</span><span class="cells"><span>data -2.0</span><span class="gv">grad 3.0</span></span></span>
+  <span class="lbl">&nbsp;&nbsp;(a, b are <b style="color:var(--accent)">leaves</b> — you made them directly)</span>
+</div>
+<p class="cap"><b>Forward</b> fills <code>data</code> left&rarr;right. <b>backward()</b> fills <code>grad</code> right&rarr;left. A <b>leaf</b> is a node you created yourself (not the output of an op) — those are the knobs you actually tune.</p>
+
+<h2>2. Your bigram net as a graph (one iteration)</h2>
+<p>Here is exactly what your forward pass builds. Only <b>one</b> node is a leaf — <code>weights</code>, the thing you created with <code>requires_grad=True</code>. Everything else is the <i>output of an operation</i>, so it is a <b>non-leaf</b>. <code>onehot</code> is a plain constant (no grad — it never changes).</p>
+
+<div class="g">
+  <span class="nd const"><span class="nm">onehot</span></span>
+  <span class="nd leaf"><span class="nm">weights</span><span class="cells"><span>27&times;27</span><span class="gv">grad ✓</span></span></span>
+  <span class="op">@</span><span class="ar">&rarr;</span>
+  <span class="nd val"><span class="nm">logits</span></span>
+  <span class="op">exp</span><span class="ar">&rarr;</span>
+  <span class="nd val"><span class="nm">exp</span></span>
+  <span class="op">sum</span><span class="ar">&rarr;</span>
+  <span class="nd val"><span class="nm">denom</span></span>
+  <span class="op">&divide;</span><span class="ar">&rarr;</span>
+  <span class="nd val"><span class="nm">probs</span></span>
+  <span class="op">index</span><span class="ar">&rarr;</span>
+  <span class="nd val"><span class="nm">target_probs</span></span>
+  <span class="op">log&middot;(-1)</span><span class="ar">&rarr;</span>
+  <span class="nd val"><span class="nm">nulls</span></span>
+  <span class="op">mean</span><span class="ar">&rarr;</span>
+  <span class="nd loss"><span class="nm">loss</span></span>
+</div>
+<p class="cap">The chain of your variables, 1:1 with your code. (<code>exp</code> actually feeds both <code>sum</code> and <code>÷</code> — a little branch I straightened out for clarity.)</p>
+
+<div class="callout"><p style="margin:0"><b>The one idea that makes the bug obvious:</b> <code>loss.backward()</code> walks this whole chain right&rarr;left and computes a gradient for <i>every</i> node — but it only <b>stores</b> the result in <code>.grad</code> for the <b>leaves</b>. The intermediates' grads are computed, used to pass the message further back, and thrown away. So after <code>backward()</code>, exactly one <code>.grad</code> is populated: <code>weights.grad</code>. That is the number your update step reads.</p>
+<p style="margin:8px 0 0">Why only leaves? Because leaves are the only things you ever update. Storing grads for the millions of intermediate nodes would waste memory for numbers you'd never look at.</p></div>
+
+<h2>3. Now the bug: your update rewires the graph</h2>
+<p>Your update line runs <b>while autograd is still recording</b>. Look at what each piece is:</p>
+<pre><span class="c"># weights requires grad, so ANY math on it is recorded as a new graph node</span>
+weights = weights - (weights.grad * 0.01)
+<span class="c">#         └──────── this subtraction becomes a NEW node (a "SubBackward") ────────┘</span>
+<span class="c"># then the name `weights` is re-pointed at that new node.</span></pre>
+
+<p>So the picture changes like this — watch the <span class="pointer">weights</span> label jump off the blue leaf and land on a red non-leaf:</p>
+
+<div class="g">
+  <span class="lbl">before&nbsp;the&nbsp;update:</span>
+  <span class="pointer ok">weights&nbsp;&rarr;</span>
+  <span class="nd leaf"><span class="nm">leaf</span><span class="cells"><span>the tensor</span><span class="gv">grad ✓</span></span></span>
+  <span class="lbl">&nbsp;a real leaf, grad filled</span>
+</div>
+<div class="g" style="margin-top:2px">
+  <span class="lbl">after&nbsp;<code>w = w - lr*g</code>:</span>
+  <span class="nd leaf" style="opacity:.5"><span class="nm">old leaf</span></span>
+  <span class="op">&minus;</span><span class="ar">&rarr;</span>
+  <span class="nd bad"><span class="nm">new node</span><span class="cells"><span>SubBackward</span><span class="gv">grad = None</span></span></span>
+  <span class="pointer">&larr; weights points here now</span>
+</div>
+<p class="cap">The label moved. <code>weights</code> is now the output of a subtraction — a non-leaf living inside the graph. Its <code>.grad</code> is <code>None</code>.</p>
+
+<h3>Two things break as a result</h3>
+<ul>
+<li><b>The crash you'll actually see:</b> non-leaf &rArr; <code>backward()</code> won't fill <code>.grad</code> &rArr; <code>weights.grad</code> is <code>None</code> &rArr; <code>None.zero_()</code> throws. This happens on the <b>first</b> loop pass.</li>
+<li><b>The quieter disaster (if it didn't crash):</b> your optimizer arithmetic is now <i>part of the graph</i>. Next iteration's <code>backward()</code> would try to differentiate through your own update, and the graph <b>grows every iteration</b> — a memory leak that never frees. An update is you <i>acting on</i> the gradient; it must live <i>outside</i> the math being differentiated.</li>
+</ul>
+
+<h3>Step through the graph growing (buggy version)</h3>
+<div class="stepbox">
+  <div class="btnrow">
+    <button id="stepBtn">Run one iteration &rarr;</button>
+    <button id="resetBtn" class="sec">Reset</button>
+    <span class="lbl" id="iterLbl">iteration 0 — fresh leaf</span>
+  </div>
+  <div id="stepGraph" class="g"></div>
+  <div class="stepcap" id="stepCap">Press &ldquo;Run one iteration.&rdquo; Watch the graph get longer and the <code>weights</code> label keep sliding onto the newest node instead of staying on a real leaf.</div>
+</div>
+
+<h2>4. &ldquo;But <code>w = w + x</code> and <code>w += x</code> are the same!&rdquo; — not for tensors</h2>
+<p>Your instinct is <b>correct for numbers</b>, and that's exactly why it misfired here. The rule is about whether the object is <b>mutable</b>:</p>
+<ul>
+<li><code>w = w + x</code> &nbsp;→&nbsp; <b>always</b> builds a brand-new object, then re-points the name at it. (&ldquo;rebind&rdquo;)</li>
+<li><code>w += x</code> &nbsp;→&nbsp; asks the object to <b>change itself in place</b> (<code>w.__iadd__</code>). If it can (list, tensor, numpy array), the name keeps pointing at the <b>same</b> object. If it can't (int, float, str — immutable), Python quietly falls back to rebinding.</li>
+</ul>
+<p>So for an <code>int</code> the two are indistinguishable — nothing to mutate, both make a new int. For a <b>tensor</b> they are genuinely different operations. Verified output:</p>
+
+<div class="two">
+<div>
+<h3 style="color:var(--soft)">int — looks the same (immutable)</h3>
+<pre>x = 5; x = x + 1   <span class="c"># new id</span>
+x = 5; x += 1      <span class="c"># also new id</span>
+<span class="c"># both: id changed? </span><b class="good">True</b></pre>
+</div>
+<div>
+<h3 style="color:var(--soft)">list — the tell (mutable)</h3>
+<pre>a=[1,2]; b=a; a += [3]
+<span class="c"># a=[1,2,3]  b=</span><b class="bad">[1,2,3]</b>  <span class="c">b saw it!</span>
+a=[1,2]; b=a; a = a + [3]
+<span class="c"># a=[1,2,3]  b=</span><b class="good">[1,2]</b>  <span class="c">b did not</span></pre>
+</div>
+</div>
+
+<p>The <b>sticky-label</b> picture: the name <code>weights</code> is a label stuck on a jar.</p>
+<div class="two">
+<div>
+<div class="g" style="margin-bottom:0">
+  <span class="pointer ok">weights</span>
+  <span class="ar">&rarr;</span>
+  <span class="nd leaf"><span class="nm">🫙 jar</span><span class="cells"><span>old + x</span></span></span>
+</div>
+<p class="cap"><code>weights += x</code> — you top up the <b>same</b> jar. Label never moves. Same object, same leaf, grad intact.</p>
+</div>
+<div>
+<div class="g" style="margin-bottom:0">
+  <span class="nd val" style="opacity:.5"><span class="nm">🫙 old</span></span>
+  <span class="ar">&rarr;</span>
+  <span class="nd bad"><span class="nm">🫙 new</span><span class="cells"><span>old + x</span></span></span>
+  <span class="pointer">&larr; weights</span>
+</div>
+<p class="cap"><code>weights = weights + x</code> — you fill a <b>new</b> jar and move the label to it. New object; the old jar is left wired into the graph.</p>
+</div>
+</div>
+
+<div class="callout"><b>Proof from real torch</b> that the buggy line makes a non-leaf:</div>
+<table>
+<tr><th>after&nbsp;the&nbsp;line</th><th><code>id</code> changed?</th><th><code>is_leaf</code></th><th><code>grad_fn</code></th><th><code>.grad</code></th></tr>
+<tr><td><code>w = w - lr*g</code></td><td class="no">yes (new)</td><td class="no">False</td><td><code>SubBackward0</code></td><td class="no">None</td></tr>
+<tr><td><code>w -= lr*g</code> (in <code>no_grad</code>)</td><td class="yes">no (same)</td><td class="yes">True</td><td class="yes">None</td><td class="yes">still there</td></tr>
+</table>
+<p>And the crash itself, verbatim from running your pattern:</p>
+<pre><b class="bad">AttributeError: 'NoneType' object has no attribute 'zero_'</b></pre>
+
+<h2>5. So what is <code>torch.no_grad()</code>?</h2>
+<p><b><code>torch.no_grad()</code> is a switch that tells autograd &ldquo;stop recording — don't add anything you see here to the graph.&rdquo;</b> It's a <i>context manager</i>: everything indented under <code>with torch.no_grad():</code> runs with recording paused. (<a href="https://pytorch.org/docs/stable/generated/torch.no_grad.html">docs</a>.)</p>
+
+<div class="origin callout"><span class="tag o">the picture</span>
+<p style="margin:2px 0 0"><code>backward()</code> works by replaying a <b>tape</b> of every operation the forward pass recorded, in reverse. Your weight update is <b>bookkeeping</b>, not part of the model's math — you don't want it on the tape. <code>no_grad()</code> is the <b>pause button on the tape recorder</b>: do your edit off-tape, then hit record again for the next forward pass. (Same reason you wrap evaluation/inference in it — no tape needed, so it's faster and lighter.)</p></div>
+
+<p>There's a second reason it's mandatory here. If you try the in-place update <b>without</b> it, PyTorch refuses outright:</p>
+<pre><span class="c"># weights -= 0.01 * weights.grad     without no_grad:</span>
+<b class="bad">RuntimeError: a leaf Variable that requires grad is being used in an in-place operation.</b></pre>
+<p>PyTorch blocks it because silently mutating a leaf that's wired into a live graph would corrupt the grads it still needs. <code>no_grad()</code> is you saying &ldquo;I know — this edit is intentional and off-graph.&rdquo;</p>
+
+<h2>6. The fix, side by side</h2>
+<div class="two">
+<div>
+<h3 style="color:var(--red)">✗ yours — rebinds onto the graph</h3>
+<pre>loss.backward()
+<b class="bad">weights = weights - (weights.grad*0.01)</b>
+weights.grad.zero_()   <span class="c"># 💥 None</span></pre>
+</div>
+<div>
+<h3 style="color:var(--green)">✓ fixed — off-graph, in-place</h3>
+<pre>loss.backward()
+<b class="good">with torch.no_grad():
+    weights -= 0.01 * weights.grad</b>
+weights.grad = None</pre>
+</div>
+</div>
+<p>Two deliberate changes: <b>(1)</b> <code>with torch.no_grad():</code> so the update isn't recorded, and <b>(2)</b> in-place <code>-=</code> so <code>weights</code> stays the <i>same</i> leaf (keeps <code>requires_grad</code>, keeps getting <code>.grad</code> filled next time). For the reset, <code>weights.grad = None</code> is what Karpathy uses (and what real optimizers do by default); <code>weights.grad.zero_()</code> also works now that <code>weights</code> is a genuine leaf again.</p>
+
+<div class="callout"><p style="margin:0"><b>Confirmed it trains.</b> Same loop shape on toy data — buggy version dies on pass 1 with the <code>NoneType</code> error; fixed version's loss falls every step:</p>
+<pre>buggy loop:  <b class="bad">AttributeError 'NoneType' ... 'zero_'</b>
+fixed loop:  <b class="good">[1.9923, 1.8126, 1.6447, 1.4889, 1.3454]</b>   <span class="c"># going down = learning</span></pre></div>
+
+<div class="keep callout"><span class="tag g">keep this</span>
+<ul style="margin:4px 0 0">
+<li><b>Leaf</b> = a tensor you created with <code>requires_grad=True</code>. Only leaves get <code>.grad</code> filled by <code>backward()</code>.</li>
+<li><code>w = w + x</code> <b>rebinds</b> (new object); <code>w += x</code> <b>mutates in place</b> (same object). Same for numbers only because numbers can't be mutated.</li>
+<li>Doing <code>w = w - lr*g</code> turns <code>w</code> into a non-leaf &rArr; <code>w.grad</code> becomes <code>None</code> &rArr; crash, plus the graph leaks.</li>
+<li>Update rule: <b>always</b> <code>with torch.no_grad():</code> + in-place, then zero the grad. <code>no_grad</code> = pause the recording tape for off-graph bookkeeping.</li>
+</ul></div>
+
+<script>
+// buggy-graph stepper
+(function(){
+  var box=document.getElementById('stepGraph'),cap=document.getElementById('stepCap'),
+      lbl=document.getElementById('iterLbl'),btn=document.getElementById('stepBtn'),rst=document.getElementById('resetBtn');
+  var n=0, MAX=3;
+  function leaf(){return '<span class="nd leaf"><span class="nm">leaf W</span><span class="cells"><span>grad ✓</span></span></span>';}
+  function badnode(i){return '<span class="op">&minus;</span><span class="ar">&rarr;</span><span class="nd bad"><span class="nm">Sub #'+i+'</span><span class="cells"><span>grad=None</span></span></span>';}
+  function render(){
+    var html='';
+    if(n===0){ html=leaf()+'<span class="pointer ok">&larr; weights (a real leaf)</span>'; }
+    else{
+      html=leaf();
+      for(var i=1;i<=n;i++){ html+=badnode(i); }
+      html+='<span class="pointer">&larr; weights</span>';
+    }
+    box.innerHTML=html;
+  }
+  function caption(){
+    if(n===0){lbl.textContent='iteration 0 — fresh leaf';cap.innerHTML='A clean leaf. <code>backward()</code> will fill its <code>.grad</code>. So far so good.';}
+    else if(n===1){lbl.textContent='iteration 0, after the update';cap.innerHTML='After <code>weights = weights - lr*grad</code>: the label jumped to a <b style="color:var(--red)">Sub</b> node. It\u2019s a non-leaf, so <code>weights.grad</code> is <code>None</code> — the next <code>weights.grad.zero_()</code> <b>crashes right here</b>.';}
+    else{lbl.textContent='iteration '+(n-1)+' (pretend it didn\u2019t crash)';cap.innerHTML='If it somehow survived, each pass tacks on <b>another</b> node. The graph keeps growing — you\u2019re now differentiating through your own optimizer, and memory never frees. '+(n>=MAX?'<b>This is the runaway.</b>':'');}
+  }
+  function upd(){render();caption();btn.disabled=(n>=MAX);}
+  btn.onclick=function(){if(n<MAX){n++;upd();}};
+  rst.onclick=function(){n=0;upd();};
+  upd();
+})();
+</script>
+</body></html>

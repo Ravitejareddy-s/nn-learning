@@ -7,3 +7,12 @@ lecture 1:
 
 
 lecture 2:
+- i did not grok the regulizaion /smoothing in the nural nets i should revisit it 
+
+lecture 3:
+
+- implemented the bengio but its just half imp half of the lecture continue form 47:00 timestamp thats the boring part which teaches how to find the learning rate batches etc
+
+lecture 4:
+- watch form 1:19:26 and also implement you havent even started the implementaion 
+

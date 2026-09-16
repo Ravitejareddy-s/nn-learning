@@ -81,3 +81,10 @@ responding and let it shape how you explain, not just what you explain.
     are computed by real Python (`math.exp` / `math.log`, etc.), so the plots are numerically
     exact, not hand-drawn. Shell gotcha: heredocs and multi-line `-c` get mangled; run scripts
     as single-arg files.
+    **Notebook env (durable):** for `.ipynb` work that needs numpy/torch/matplotlib there is now
+    a real venv at project root `.venv/` on Homebrew **python3.14** (torch 2.14, numpy 2.5,
+    matplotlib 3.11, ipykernel). It's registered as Jupyter kernelspec **`nn-zero-to-hero`**
+    ("Python (nn-zero-to-hero .venv)") — select that kernel, never bare Homebrew python3.14
+    (externally-managed / PEP 668, so the VS Code "Install ipykernel" button fails silently).
+    Interpreter: `.venv/bin/python`. Recreate with `python3.14 -m venv .venv && .venv/bin/pip
+    install ipykernel numpy matplotlib torch`.

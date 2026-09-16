@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Wagon: dot product as useful work</title>
+<style>
+  :root{--ink:#23252b;--soft:#5b6270;--line:#e3e6ea;--bg:#fbfbfc;
+        --pull:#d62728;--useful:#2ca02c;--waste:#9aa0a8;--motion:#1f77b4;}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,'Segoe UI',Arial,sans-serif;line-height:1.6;color:var(--ink);
+       max-width:1000px;margin:0 auto;padding:30px 20px 90px;background:var(--bg)}
+  h1{font-size:25px;margin:0 0 4px}
+  h2{font-size:19px;margin:34px 0 6px;padding-top:12px;border-top:2px solid var(--line)}
+  p{margin:9px 0}
+  .lede{color:var(--soft);font-size:15px;margin-top:0}
+  code{background:#eef0f3;padding:1px 6px;border-radius:5px;font-size:.92em}
+  svg{max-width:100%;height:auto;touch-action:none;display:block;
+      border:1px solid var(--line);border-radius:12px;background:#eef4fa;margin-top:14px}
+  .controls{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .controls label{font-size:13.5px;color:var(--soft)}
+  input[type=range]{vertical-align:middle}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px;font-size:13.5px;cursor:pointer}
+  .btn:hover{background:#f2f4f7}
+  .readout{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
+  .chip{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:#fff;font-size:14px}
+  .chip b{font-size:19px;display:block;margin-top:2px}
+  .pull{color:var(--pull)} .useful{color:var(--useful)} .waste{color:var(--waste)} .motion{color:var(--motion)}
+  .verdict{margin-top:14px;font-size:15px}
+  .badge{display:inline-block;padding:3px 12px;border-radius:20px;font-weight:700;color:#fff}
+  .keyrow{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--soft);margin-top:10px}
+  .sw{display:inline-block;width:20px;height:0;border-top-width:3px;border-top-style:solid;vertical-align:middle;margin-right:5px}
+  .callout{border-left:4px solid var(--useful);background:#f1f8f0;padding:11px 15px;margin:16px 0;border-radius:0 8px 8px 0;font-size:14.5px}
+</style>
+</head>
+<body>
+
+<h1>Pulling a wagon: the dot product is the <span class="useful">useful work</span></h1>
+<p class="lede">Drag the <b>hand</b> (the end of the rope) to change how hard and at what angle you pull. Change how far the wagon rolls with the slider. Then hit <b>Pull!</b> to roll it.</p>
+
+<svg id="stage" viewBox="0 0 760 400" xmlns="http://www.w3.org/2000/svg"></svg>
+
+<div class="controls">
+  <label>distance rolled: <input id="dist" type="range" min="0" max="6" step="0.5" value="4"> <span id="distVal">4</span> m</label>
+  <button class="btn" id="pull">Pull! (roll the wagon)</button>
+  <button class="btn" id="reset">reset</button>
+</div>
+
+<div class="readout">
+  <div class="chip pull">pull force |A|<b id="force"></b></div>
+  <div class="chip">angle &theta;<b id="angle"></b></div>
+  <div class="chip useful">useful forward part<br>|A|cos&theta;<b id="fwd"></b></div>
+  <div class="chip waste">wasted (lifting) part<br>|A|sin&theta;<b id="wst"></b></div>
+  <div class="chip motion">distance |B|<b id="dval"></b></div>
+</div>
+
+<div class="verdict">
+  <b>Work done</b> = A&middot;B = (useful forward part) &times; distance = <b id="work" style="font-size:20px"></b>
+  &nbsp; <span class="badge" id="badge"></span>
+</div>
+
+<div class="keyrow">
+  <span><span class="sw" style="border-top-color:var(--pull)"></span>A — your pull (along the rope)</span>
+  <span><span class="sw" style="border-top-color:var(--useful)"></span>forward part (this does the work)</span>
+  <span><span class="sw" style="border-top-color:var(--waste);border-top-style:dashed"></span>vertical part (wasted, just lifts)</span>
+  <span><span class="sw" style="border-top-color:var(--motion)"></span>B — the wagon's motion</span>
+</div>
+
+<h2>What to try</h2>
+<div class="callout">
+  <b>1. Flatten the rope</b> (drag the hand down near the ground) &rarr; almost all your pull becomes useful, work is near maximum. cos&theta; &rarr; 1.
+</div>
+<div class="callout" style="border-left-color:var(--waste);background:#f4f5f6">
+  <b>2. Pull straight up</b> (drag the hand directly above the handle) &rarr; the forward part collapses to 0, the wagon does not roll forward at all. <b>Work = 0.</b> This is exactly what "perpendicular &rarr; dot product 0" means &mdash; every bit of effort is wasted on lifting.
+</div>
+<div class="callout" style="border-left-color:var(--pull);background:#fdecec">
+  <b>3. Pull backward</b> (drag the hand to the left of the handle) &rarr; the forward part goes negative, you are braking. <b>Work &lt; 0.</b>
+</div>
+
+<p style="color:var(--soft);font-size:13px">The dot product silently deletes the wasted vertical part every time &mdash; that is the whole point of <code>cos&theta;</code>. It keeps only the effort that lines up with where the wagon actually goes.</p>
+
+<script>
+(function(){
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.getElementById("stage");
+  const groundY=300, handleX=200, handleY=290; // handle = top-front of wagon, on screen
+  const scale=34;   // px per unit of force
+  let hand={x:handleX+120, y:handleY-90};  // screen coords of the hand (rope end)
+  let dist=4;
+  let wagonShift=0;    // px the wagon has rolled (for animation)
+
+  function mk(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  function defs(){
+    const d=mk("defs",{});
+    [["mp","var(--pull)"],["mu","var(--useful)"],["mm","var(--motion)"],["mw","var(--waste)"]].forEach(([id,c])=>{
+      const m=mk("marker",{id,markerWidth:9,markerHeight:9,refX:6.5,refY:3,orient:"auto",markerUnits:"strokeWidth"});
+      m.appendChild(mk("path",{d:"M0,0 L7,3 L0,6 Z",fill:c})); d.appendChild(m);
+    });
+    svg.appendChild(d);
+  }
+  defs();
+  const layer=mk("g",{}); svg.appendChild(layer);
+  function fmt(v){const r=Math.round(v*100)/100;return (Object.is(r,-0)?0:r).toString();}
+
+  function draw(){
+    layer.innerHTML="";
+    // sky already via bg; ground strip
+    layer.appendChild(mk("rect",{x:0,y:groundY,width:760,height:400-groundY,fill:"#dfe7c9"}));
+    layer.appendChild(mk("line",{x1:0,y1:groundY,x2:760,y2:groundY,stroke:"#b9c79a","stroke-width":2}));
+    // sun
+    layer.appendChild(mk("circle",{cx:700,cy:50,r:22,fill:"#f4c430",opacity:0.85}));
+
+    const hx=handleX+wagonShift, hy=handleY;
+
+    // ---- wagon (shifts when rolled) ----
+    const w=mk("g",{transform:`translate(${wagonShift},0)`});
+    w.appendChild(mk("rect",{x:handleX-70,y:groundY-42,width:96,height:30,rx:5,fill:"#c0743a",stroke:"#8a5223","stroke-width":2}));
+    w.appendChild(mk("circle",{cx:handleX-50,cy:groundY-8,r:12,fill:"#3a3f47",stroke:"#1c1f24","stroke-width":3}));
+    w.appendChild(mk("circle",{cx:handleX+8,cy:groundY-8,r:12,fill:"#3a3f47",stroke:"#1c1f24","stroke-width":3}));
+    w.appendChild(mk("circle",{cx:handleX-50,cy:groundY-8,r:3,fill:"#9aa0a8"}));
+    w.appendChild(mk("circle",{cx:handleX+8,cy:groundY-8,r:3,fill:"#9aa0a8"}));
+    layer.appendChild(w);
+
+    // ---- vectors in force units ----
+    const fwdPx = hand.x - hx;              // forward (right +) in px
+    const upPx  = hy - hand.y;              // up (+) in px
+    const forceUnits = Math.hypot(fwdPx,upPx)/scale;
+    const fwdUnits = fwdPx/scale;
+    const upUnits  = upPx/scale;
+    const theta = Math.atan2(upPx, fwdPx)*180/Math.PI;  // 0 = flat forward
+
+    // rope (thin) from handle to hand
+    layer.appendChild(mk("line",{x1:hx,y1:hy,x2:hand.x,y2:hand.y,stroke:"#8a5223","stroke-width":2,"stroke-dasharray":"2,3",opacity:0.6}));
+
+    // decomposition triangle: forward (green) then vertical (grey) up to hand
+    const cornerX = hand.x, cornerY = hy; // corner under the hand, at handle height
+    layer.appendChild(mk("line",{x1:hx,y1:hy,x2:cornerX,y2:cornerY,
+      stroke:"var(--useful)","stroke-width":6,"marker-end":"url(#mu)",opacity:0.9}));
+    layer.appendChild(mk("line",{x1:cornerX,y1:cornerY,x2:hand.x,y2:hand.y,
+      stroke:"var(--waste)","stroke-width":3,"stroke-dasharray":"5,4","marker-end":"url(#mw)"}));
+    // right-angle mark
+    if(Math.abs(fwdPx)>6 && Math.abs(upPx)>6){
+      const s=fwdPx>=0?-1:1;
+      layer.appendChild(mk("path",{d:`M ${cornerX+s*10} ${cornerY} L ${cornerX+s*10} ${cornerY-10} L ${cornerX} ${cornerY-10}`,
+        fill:"none",stroke:"#777","stroke-width":1}));
+    }
+
+    // pull vector A (red) along rope
+    layer.appendChild(mk("line",{x1:hx,y1:hy,x2:hand.x,y2:hand.y,
+      stroke:"var(--pull)","stroke-width":3.5,"marker-end":"url(#mp)"}));
+    layer.appendChild(mk("text",{x:hand.x+8,y:hand.y-4,"font-size":13,fill:"var(--pull)","font-weight":700})).textContent="A = your pull";
+
+    // motion vector B (blue) on the ground
+    const bLen = dist*scale;
+    layer.appendChild(mk("line",{x1:hx,y1:groundY-4,x2:hx+bLen,y2:groundY-4,
+      stroke:"var(--motion)","stroke-width":4,"marker-end":"url(#mm)"}));
+    layer.appendChild(mk("text",{x:hx+bLen/2,y:groundY+20,"font-size":13,fill:"var(--motion)","font-weight":700,"text-anchor":"middle"})).textContent="B = wagon rolls this far";
+
+    // draggable hand
+    const h=mk("circle",{cx:hand.x,cy:hand.y,r:9,fill:"var(--pull)",stroke:"#fff","stroke-width":2,cursor:"grab"});
+    h.dataset.h="1"; layer.appendChild(h);
+    layer.appendChild(mk("text",{x:hand.x,y:hand.y-16,"font-size":11,fill:"var(--soft)","text-anchor":"middle"})).textContent="drag me";
+
+    // readouts
+    document.getElementById("force").textContent=fmt(forceUnits);
+    document.getElementById("angle").textContent=fmt(Math.abs(theta))+"\u00B0";
+    document.getElementById("fwd").textContent=fmt(fwdUnits);
+    document.getElementById("wst").textContent=fmt(Math.abs(upUnits));
+    document.getElementById("dval").textContent=fmt(dist);
+    const work=fwdUnits*dist;
+    document.getElementById("work").textContent=fmt(work)+" units";
+    const b=document.getElementById("badge");
+    if(Math.abs(work)<0.05){b.textContent="zero — all effort wasted on lifting";b.style.background="#7a7f87";}
+    else if(work>0){b.textContent="positive — moving it forward";b.style.background="var(--useful)";}
+    else {b.textContent="negative — you are braking it";b.style.background="var(--pull)";}
+  }
+
+  function pt(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
+    return p.matrixTransform(svg.getScreenCTM().inverse());}
+  let drag=false;
+  svg.addEventListener("pointerdown",e=>{if(e.target.dataset&&e.target.dataset.h){drag=true;svg.setPointerCapture(e.pointerId);}});
+  svg.addEventListener("pointermove",e=>{
+    if(!drag)return;const p=pt(e);
+    hand={x:Math.max(60,Math.min(700,p.x)), y:Math.max(30,Math.min(groundY-4,p.y))};
+    draw();
+  });
+  svg.addEventListener("pointerup",()=>drag=false);
+  svg.addEventListener("pointerleave",()=>drag=false);
+
+  document.getElementById("dist").addEventListener("input",e=>{
+    dist=parseFloat(e.target.value);document.getElementById("distVal").textContent=dist;draw();});
+
+  document.getElementById("pull").onclick=()=>{
+    const fwdUnits=(hand.x-(handleX+wagonShift))/scale;
+    const work=fwdUnits*dist;
+    const target=Math.max(-160,Math.min(280, wagonShift + work*scale*0.9));
+    const start=wagonShift, t0=performance.now(), dur=900;
+    // move the hand along with the wagon so the rope stays attached
+    const handStartX=hand.x;
+    function step(now){
+      const k=Math.min(1,(now-t0)/dur);
+      const ease=1-Math.pow(1-k,3);
+      const ns=start+(target-start)*ease;
+      hand.x = handStartX + (ns-start);
+      wagonShift=ns;
+      draw();
+      if(k<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  };
+  document.getElementById("reset").onclick=()=>{
+    hand={x:handleX+120,y:handleY-90};dist=4;wagonShift=0;
+    document.getElementById("dist").value=4;document.getElementById("distVal").textContent=4;draw();};
+
+  draw();
+})();
+</script>
+</body>
+</html>
