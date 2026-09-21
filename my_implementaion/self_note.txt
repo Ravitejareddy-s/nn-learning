@@ -16,3 +16,5 @@ lecture 3:
 lecture 4:
 - watch form 1:19:26 and also implement you havent even started the implementaion 
 
+lecture 7:
+- did not fully get the dot product and how its finding the similaritys between two vectors and how we are doing it for the multi dimentional arrays @ 01:07:02

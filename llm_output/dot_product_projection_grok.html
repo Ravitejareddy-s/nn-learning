@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dot product = length × shadow (grok it)</title>
+<style>
+  :root{
+    --a:#2f6df6;   /* vector a  */
+    --b:#f6862f;   /* vector b  */
+    --sh:#18a558;  /* shadow    */
+    --ink:#1f2733; --muted:#6b7684; --line:#dfe4ea; --bg:#f7f9fc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 22px;font-size:15px}
+  .stage{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;
+        box-shadow:0 1px 3px rgba(20,30,50,.05)}
+  .canvas-card{padding:14px}
+  .panel{flex:1;min-width:320px;padding:20px 22px}
+  svg{display:block;touch-action:none;border-radius:10px;background:#fdfefe}
+  .hint{font-size:13px;color:var(--muted);margin-top:10px;text-align:center}
+  .row{display:flex;align-items:center;gap:10px;margin:10px 0}
+  .sw{width:26px;height:4px;border-radius:2px;display:inline-block}
+  .eq{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:15px;
+      background:var(--bg);border:1px solid var(--line);border-radius:10px;
+      padding:12px 14px;margin:10px 0}
+  .eq .lbl{color:var(--muted);font-size:12px;letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:6px}
+  .big{font-size:19px}
+  .dead{color:#b9c0c9}
+  .hl{background:#fff6e6;border-color:#f6c96b}
+  .match{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px}
+  .badge{font-weight:600;color:#fff;background:var(--sh);border-radius:20px;padding:3px 12px;font-size:13px}
+  label.toggle{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
+               font-size:15px;margin:6px 0 2px;padding:10px 12px;border:1px solid var(--line);
+               border-radius:10px;background:#fff}
+  label.toggle input{width:18px;height:18px}
+  .cap{font-size:13px;color:var(--muted);margin:4px 2px 16px}
+  .note{font-size:13.5px;background:#eef4ff;border:1px solid #cfe0ff;border-radius:10px;
+        padding:12px 14px;margin-top:16px;color:#274690}
+  code{font-family:"SF Mono",ui-monospace,Menlo,monospace;background:#eef1f5;border-radius:4px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Dot product = length&nbsp;of&nbsp;<span style="color:var(--a)">a</span> &times; shadow&nbsp;of&nbsp;<span style="color:var(--b)">b</span></h1>
+  <p class="sub">Drag the arrow tips. Watch the algebra (adding products) and the geometry (one multiply) land on the <b>same number</b>.</p>
+
+  <div class="stage">
+    <div class="card canvas-card">
+      <svg id="svg" width="500" height="500" viewBox="0 0 500 500"></svg>
+      <div class="hint">drag the &#9679; tips of <span style="color:var(--a)">a</span> and <span style="color:var(--b)">b</span></div>
+    </div>
+
+    <div class="card panel">
+      <div class="row"><span class="sw" style="background:var(--a)"></span> <b>a</b> &nbsp;=&nbsp; <span id="aVec"></span></div>
+      <div class="row"><span class="sw" style="background:var(--b)"></span> <b>b</b> &nbsp;=&nbsp; <span id="bVec"></span></div>
+      <div class="row"><span class="sw" style="background:var(--sh)"></span> shadow of <b>b</b> on <b>a</b> &nbsp;=&nbsp; <span id="shVal"></span></div>
+
+      <div class="eq" id="algBox">
+        <span class="lbl">Algebra &mdash; add the products</span>
+        <span id="algLine" class="big"></span>
+      </div>
+
+      <div class="eq hl">
+        <span class="lbl">Geometry &mdash; one multiply</span>
+        <span id="geoLine" class="big"></span>
+      </div>
+
+      <div class="match">
+        <span class="badge">same!</span>
+        <span>both equal the dot product <b id="dotVal"></b></span>
+      </div>
+
+      <label class="toggle">
+        <input type="checkbox" id="alignChk">
+        Tilt the axes so <b>&nbsp;a&nbsp;</b> lies flat on the x&#8209;axis
+      </label>
+      <div class="cap" id="alignCap">Turn this on to watch the <code>+</code> disappear.</div>
+
+      <div class="note" id="noteBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const svg = document.getElementById('svg');
+const SVGNS = "http://www.w3.org/2000/svg";
+const OX = 250, OY = 250, S = 42;           // origin px, scale px/unit
+let a = {x: 3, y: 1};
+let b = {x: 1, y: 2.6};
+let aligned = false;
+let drag = null;
+
+// ---- math helpers ----
+const dot   = (p,q)=> p.x*q.x + p.y*q.y;
+const len   = p => Math.hypot(p.x, p.y);
+const rot   = (p,ph)=> ({ x: p.x*Math.cos(ph) - p.y*Math.sin(ph),
+                          y: p.x*Math.sin(ph) + p.y*Math.cos(ph) });
+const sx = x => OX + x*S;
+const sy = y => OY - y*S;
+const fmt = n => (Math.abs(n)<1e-9?0:n).toFixed(2);
+
+// ---- svg builders ----
+function el(name, attrs){ const e=document.createElementNS(SVGNS,name);
+  for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+function line(x1,y1,x2,y2,attrs){ return el('line',{x1,y1,x2,y2,...attrs}); }
+
+function arrow(vec, color, id, drawHandle){
+  const g = el('g',{});
+  g.appendChild(line(sx(0),sy(0),sx(vec.x),sy(vec.y),
+     {stroke:color,'stroke-width':3.5,'stroke-linecap':'round','marker-end':`url(#ah-${id})`}));
+  if(drawHandle){
+    const h = el('circle',{cx:sx(vec.x),cy:sy(vec.y),r:11,
+       fill:color,'fill-opacity':0.18,stroke:color,'stroke-width':2.5,
+       cursor:'grab','data-h':id});
+    g.appendChild(h);
+  }
+  return g;
+}
+
+function render(){
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // arrow-head markers
+  const defs = el('defs',{});
+  for(const [id,color] of [['a','var(--a)'],['b','var(--b)'],['sh','var(--sh)']]){
+    const m = el('marker',{id:`ah-${id}`,markerWidth:11,markerHeight:11,
+        refX:8,refY:5,orient:'auto',markerUnits:'userSpaceOnUse'});
+    m.appendChild(el('path',{d:'M0,0 L9,5 L0,10 z',fill:color}));
+    defs.appendChild(m);
+  }
+  svg.appendChild(defs);
+
+  // grid
+  const grid = el('g',{});
+  for(let i=-5;i<=5;i++){
+    grid.appendChild(line(sx(i),sy(-5),sx(i),sy(5),{stroke:'var(--line)','stroke-width':1}));
+    grid.appendChild(line(sx(-5),sy(i),sx(5),sy(i),{stroke:'var(--line)','stroke-width':1}));
+  }
+  grid.appendChild(line(sx(-5.4),sy(0),sx(5.4),sy(0),{stroke:'#aab3bf','stroke-width':1.6}));
+  grid.appendChild(line(sx(0),sy(-5.4),sx(0),sy(5.4),{stroke:'#aab3bf','stroke-width':1.6}));
+  svg.appendChild(grid);
+
+  // pick display vectors (rotate the scene so a is horizontal when aligned)
+  const phi = aligned ? -Math.atan2(a.y, a.x) : 0;
+  const aD = rot(a, phi);
+  const bD = rot(b, phi);
+
+  // shadow scalar (frame-independent): how far b reaches along a
+  const s = dot(a,b) / (len(a) || 1e-9);       // signed shadow length
+  const ua = { x: aD.x/(len(aD)||1e-9), y: aD.y/(len(aD)||1e-9) };
+  const foot = { x: ua.x*s, y: ua.y*s };        // foot of perpendicular
+
+  // shadow segment on a's line
+  svg.appendChild(line(sx(0),sy(0),sx(foot.x),sy(foot.y),
+     {stroke:'var(--sh)','stroke-width':7,'stroke-linecap':'round','stroke-opacity':0.55}));
+
+  // dashed perpendicular from b tip down to foot
+  svg.appendChild(line(sx(bD.x),sy(bD.y),sx(foot.x),sy(foot.y),
+     {stroke:'#98a2b0','stroke-width':1.8,'stroke-dasharray':'5 5'}));
+
+  // right-angle marker at foot (pixel space)
+  const fpx={x:sx(foot.x),y:sy(foot.y)}, bpx={x:sx(bD.x),y:sy(bD.y)}, opx={x:sx(0),y:sy(0)};
+  const d1 = unitPx(opx,fpx), d2 = unitPx(fpx,bpx);
+  if(Math.abs(s)>0.15 && len({x:bD.x-foot.x,y:bD.y-foot.y})>0.12){
+    const k=12;
+    const p1={x:fpx.x - d1.x*k, y:fpx.y - d1.y*k};
+    const p3={x:fpx.x + d2.x*k, y:fpx.y + d2.y*k};
+    const p2={x:p1.x + d2.x*k, y:p1.y + d2.y*k};
+    svg.appendChild(el('polyline',{points:`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`,
+        fill:'none',stroke:'#98a2b0','stroke-width':1.5}));
+  }
+
+  // vectors (b first so a sits on top); handles only when not aligned
+  svg.appendChild(arrow(bD,'var(--b)','b',!aligned));
+  svg.appendChild(arrow(aD,'var(--a)','a',!aligned));
+
+  attachHandles();
+  updatePanel(aD, bD, s);
+}
+
+function unitPx(p,q){ const dx=q.x-p.x, dy=q.y-p.y, L=Math.hypot(dx,dy)||1e-9;
+  return {x:dx/L, y:dy/L}; }
+
+function updatePanel(aD,bD,s){
+  const D = dot(a,b);
+  document.getElementById('dotVal').textContent = fmt(D);
+  document.getElementById('shVal').textContent  = fmt(s);
+
+  if(!aligned){
+    document.getElementById('aVec').textContent = `[${fmt(a.x)}, ${fmt(a.y)}]`;
+    document.getElementById('bVec').textContent = `[${fmt(b.x)}, ${fmt(b.y)}]`;
+    document.getElementById('algLine').innerHTML =
+      `${fmt(a.x)}&middot;${fmt(b.x)} + ${fmt(a.y)}&middot;${fmt(b.y)} = ${fmt(a.x*b.x)} + ${fmt(a.y*b.y)} = <b>${fmt(D)}</b>`;
+    document.getElementById('geoLine').innerHTML =
+      `|a| &times; shadow = ${fmt(len(a))} &times; ${fmt(s)} = <b>${fmt(D)}</b>`;
+    document.getElementById('noteBox').innerHTML =
+      `The two terms are the pieces of the shadow along x and along y. Adding them rebuilds the whole shadow.`;
+    document.getElementById('alignCap').innerHTML = `Turn this on to watch the <code>+</code> disappear.`;
+  } else {
+    // in a's frame: a = [|a|, 0], b = rotated
+    const aL = len(a);
+    document.getElementById('aVec').innerHTML = `[${fmt(aL)}, <b style="color:var(--sh)">0</b>]`;
+    document.getElementById('bVec').textContent = `[${fmt(bD.x)}, ${fmt(bD.y)}]`;
+    document.getElementById('algLine').innerHTML =
+      `${fmt(aL)}&middot;${fmt(bD.x)} <span class="dead">+ ${fmt(aL)}&middot;0</span> = ${fmt(aL*bD.x)} <span class="dead">+ 0</span> = <b>${fmt(D)}</b>`;
+    document.getElementById('geoLine').innerHTML =
+      `|a| &times; shadow = ${fmt(aL)} &times; ${fmt(bD.x)} = <b>${fmt(D)}</b>`;
+    document.getElementById('noteBox').innerHTML =
+      `Same arrows, same dot product &mdash; but now <b>a</b> has no y&#8209;part, so the second term is <b>0</b> and drops out. The sum became one multiply: <b>length of a &times; b's x&#8209;coordinate</b>, and b's x&#8209;coordinate <i>is</i> its shadow on <b>a</b>. That's why adding products equals length&times;shadow.`;
+    document.getElementById('alignCap').innerHTML = `The <code>y&middot;y</code> term is now 0 &mdash; the addition was just bookkeeping for tilted axes.`;
+  }
+}
+
+// ---- dragging ----
+function attachHandles(){
+  svg.querySelectorAll('[data-h]').forEach(h=>{
+    h.addEventListener('pointerdown', e=>{
+      drag = h.getAttribute('data-h'); h.setPointerCapture(e.pointerId);
+      h.style.cursor='grabbing'; e.preventDefault();
+    });
+  });
+}
+svg.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  const r = svg.getBoundingClientRect();
+  const mx = (e.clientX - r.left - OX)/S;
+  const my = -(e.clientY - r.top - OY)/S;
+  const snap = v => Math.max(-5, Math.min(5, Math.round(v*2)/2));  // snap to 0.5
+  const p = {x:snap(mx), y:snap(my)};
+  if(drag==='a'){ if(len(p)>0.2) a=p; } else { b=p; }
+  render();
+});
+window.addEventListener('pointerup', ()=>{ drag=null; });
+
+document.getElementById('alignChk').addEventListener('change', e=>{
+  aligned = e.target.checked; render();
+});
+
+render();
+</script>
+</body>
+</html>
