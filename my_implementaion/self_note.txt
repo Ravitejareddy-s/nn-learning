@@ -18,3 +18,4 @@ lecture 4:
 
 lecture 7:
 - did not fully get the dot product and how its finding the similaritys between two vectors and how we are doing it for the multi dimentional arrays @ 01:07:02
+- not groked why we are adding the emeding to the attention head why not concatinate
