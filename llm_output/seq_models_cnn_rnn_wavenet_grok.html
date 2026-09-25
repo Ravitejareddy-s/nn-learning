@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNN vs RNN vs WaveNet</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:920px;
+       margin:0 auto;padding:24px;color:#1e293b;background:#f8fafc;line-height:1.55}
+  h1{font-size:24px} h2{font-size:19px;margin-top:6px}
+  .panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;
+         padding:18px 20px;margin:20px 0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 10px;
+       border-radius:999px;margin-left:8px;vertical-align:middle}
+  .t-local{background:#fef3c7;color:#92400e}
+  .t-chain{background:#dcfce7;color:#166534}
+  .t-tree{background:#f3e8ff;color:#6b21a8}
+  .lead{color:#475569;font-size:14px;margin:2px 0 10px}
+  text{font-size:14px;font-weight:600;fill:#0f172a;pointer-events:none}
+  .edge{stroke:#cbd5e1;stroke-width:1.6}
+  .n-input{fill:#dbeafe;stroke:#3b82f6;stroke-width:1.6}
+  .n-cnn{fill:#fde68a;stroke:#d97706;stroke-width:1.6}
+  .n-rnn{fill:#bbf7d0;stroke:#16a34a;stroke-width:1.6}
+  .n-pred{fill:#fecaca;stroke:#dc2626;stroke-width:1.6}
+  .n-wl1{fill:#e9d5ff;stroke:#9333ea;stroke-width:1.6}
+  .n-wl2{fill:#ddd6fe;stroke:#7c3aed;stroke-width:1.6}
+  .n-wl3{fill:#c4b5fd;stroke:#6d28d9;stroke-width:1.6}
+  .hl-node{fill:#fb923c!important;stroke:#c2410c!important;stroke-width:2.4!important}
+  .hl-edge{stroke:#f97316!important;stroke-width:3.2!important}
+  #banner{position:sticky;top:0;background:#0f172a;color:#e2e8f0;padding:10px 16px;
+          border-radius:10px;font-size:14px;z-index:5}
+  .hint{font-size:13px;color:#64748b;font-style:italic}
+  .legend{font-size:12.5px;color:#475569;margin-top:8px}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;
+      vertical-align:middle;margin:0 4px 0 10px}
+  code{background:#eef2ff;padding:1px 6px;border-radius:5px;font-size:13px}
+</style></head><body>
+
+<h1>Three ways to read a sequence</h1>
+<p class="lead">Same 8-character input <b>m a c h i n e s</b> in every panel. Blue = input
+characters. Colored boxes = computed values (same color = <b>same shared weights</b>).
+<b>Click any node</b> to light up which inputs it actually depends on.</p>
+<div id="banner">Click a colored node to see its receptive field (which inputs feed it).</div>
+
+<div class="panel">
+  <h2>1. CNN <span class="tag t-local">local &middot; parallel &middot; shallow</span></h2>
+  <p class="lead">One small filter (kernel 2) slides across. Each output is computed
+  <b>independently</b> from a fixed 2-input window &mdash; no baton passed between them,
+  so they could all be computed at once. Click an <code>o</code> box: only its 2 inputs
+  light up. Reach is fixed and small.</p>
+  <svg viewBox="0 0 860 230" width="100%" style="max-width:860px">
+<defs><marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/></marker></defs>
+<line id="edge__cnn_in0__cnn_o1" class="edge" x1="70.0" y1="77.0" x2="118.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in1__cnn_o1" class="edge" x1="166.0" y1="77.0" x2="118.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in1__cnn_o2" class="edge" x1="166.0" y1="77.0" x2="214.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in2__cnn_o2" class="edge" x1="262.0" y1="77.0" x2="214.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in2__cnn_o3" class="edge" x1="262.0" y1="77.0" x2="310.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in3__cnn_o3" class="edge" x1="358.0" y1="77.0" x2="310.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in3__cnn_o4" class="edge" x1="358.0" y1="77.0" x2="406.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in4__cnn_o4" class="edge" x1="454.0" y1="77.0" x2="406.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in4__cnn_o5" class="edge" x1="454.0" y1="77.0" x2="502.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in5__cnn_o5" class="edge" x1="550.0" y1="77.0" x2="502.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in5__cnn_o6" class="edge" x1="550.0" y1="77.0" x2="598.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in6__cnn_o6" class="edge" x1="646.0" y1="77.0" x2="598.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in6__cnn_o7" class="edge" x1="646.0" y1="77.0" x2="694.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__cnn_in7__cnn_o7" class="edge" x1="742.0" y1="77.0" x2="694.0" y2="163.0" marker-end="url(#arw)"/>
+<g class="node" onclick="showRF('cnn_in0')" style="cursor:pointer"><rect id="node__cnn_in0" class="n-input" x="43.0" y="43.0" width="54" height="34" rx="7"/><text x="70.0" y="65.0" text-anchor="middle">m</text></g>
+<g class="node" onclick="showRF('cnn_in1')" style="cursor:pointer"><rect id="node__cnn_in1" class="n-input" x="139.0" y="43.0" width="54" height="34" rx="7"/><text x="166.0" y="65.0" text-anchor="middle">a</text></g>
+<g class="node" onclick="showRF('cnn_in2')" style="cursor:pointer"><rect id="node__cnn_in2" class="n-input" x="235.0" y="43.0" width="54" height="34" rx="7"/><text x="262.0" y="65.0" text-anchor="middle">c</text></g>
+<g class="node" onclick="showRF('cnn_in3')" style="cursor:pointer"><rect id="node__cnn_in3" class="n-input" x="331.0" y="43.0" width="54" height="34" rx="7"/><text x="358.0" y="65.0" text-anchor="middle">h</text></g>
+<g class="node" onclick="showRF('cnn_in4')" style="cursor:pointer"><rect id="node__cnn_in4" class="n-input" x="427.0" y="43.0" width="54" height="34" rx="7"/><text x="454.0" y="65.0" text-anchor="middle">i</text></g>
+<g class="node" onclick="showRF('cnn_in5')" style="cursor:pointer"><rect id="node__cnn_in5" class="n-input" x="523.0" y="43.0" width="54" height="34" rx="7"/><text x="550.0" y="65.0" text-anchor="middle">n</text></g>
+<g class="node" onclick="showRF('cnn_in6')" style="cursor:pointer"><rect id="node__cnn_in6" class="n-input" x="619.0" y="43.0" width="54" height="34" rx="7"/><text x="646.0" y="65.0" text-anchor="middle">e</text></g>
+<g class="node" onclick="showRF('cnn_in7')" style="cursor:pointer"><rect id="node__cnn_in7" class="n-input" x="715.0" y="43.0" width="54" height="34" rx="7"/><text x="742.0" y="65.0" text-anchor="middle">s</text></g>
+<g class="node" onclick="showRF('cnn_o1')" style="cursor:pointer"><rect id="node__cnn_o1" class="n-cnn" x="91.0" y="163.0" width="54" height="34" rx="7"/><text x="118.0" y="185.0" text-anchor="middle">o1</text></g>
+<g class="node" onclick="showRF('cnn_o2')" style="cursor:pointer"><rect id="node__cnn_o2" class="n-cnn" x="187.0" y="163.0" width="54" height="34" rx="7"/><text x="214.0" y="185.0" text-anchor="middle">o2</text></g>
+<g class="node" onclick="showRF('cnn_o3')" style="cursor:pointer"><rect id="node__cnn_o3" class="n-cnn" x="283.0" y="163.0" width="54" height="34" rx="7"/><text x="310.0" y="185.0" text-anchor="middle">o3</text></g>
+<g class="node" onclick="showRF('cnn_o4')" style="cursor:pointer"><rect id="node__cnn_o4" class="n-cnn" x="379.0" y="163.0" width="54" height="34" rx="7"/><text x="406.0" y="185.0" text-anchor="middle">o4</text></g>
+<g class="node" onclick="showRF('cnn_o5')" style="cursor:pointer"><rect id="node__cnn_o5" class="n-cnn" x="475.0" y="163.0" width="54" height="34" rx="7"/><text x="502.0" y="185.0" text-anchor="middle">o5</text></g>
+<g class="node" onclick="showRF('cnn_o6')" style="cursor:pointer"><rect id="node__cnn_o6" class="n-cnn" x="571.0" y="163.0" width="54" height="34" rx="7"/><text x="598.0" y="185.0" text-anchor="middle">o6</text></g>
+<g class="node" onclick="showRF('cnn_o7')" style="cursor:pointer"><rect id="node__cnn_o7" class="n-cnn" x="667.0" y="163.0" width="54" height="34" rx="7"/><text x="694.0" y="185.0" text-anchor="middle">o7</text></g>
+</svg>
+  <div class="legend"><span class="sw" style="background:#fde68a"></span>
+  all outputs share the <b>one</b> filter's weights.</div>
+</div>
+
+<div class="panel">
+  <h2>2. RNN <span class="tag t-chain">whole history &middot; sequential &middot; deep</span></h2>
+  <p class="lead">One cell, reused at every step, carries a running memory
+  <code>h</code> forward &mdash; the baton (green horizontal arrows). Each
+  <code>h</code> = <code>tanh(Linear(concat(prev h, this input)))</code>. Click the red
+  <b>next</b> node: <b>all 8</b> inputs light up, because the memory chains back through
+  every step. That long chain is also why it is a "very very deep network" and why it's
+  slow (step 3 must wait for step 2).</p>
+  <svg viewBox="0 0 860 350" width="100%" style="max-width:860px">
+<defs><marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/></marker></defs>
+<line id="edge__rnn_in0__rnn_h0" class="edge" x1="70.0" y1="77.0" x2="70.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_in1__rnn_h1" class="edge" x1="166.0" y1="77.0" x2="166.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h0__rnn_h1" class="edge" x1="97.0" y1="180.0" x2="139.0" y2="180.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_in2__rnn_h2" class="edge" x1="262.0" y1="77.0" x2="262.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h1__rnn_h2" class="edge" x1="193.0" y1="180.0" x2="235.0" y2="180.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_in3__rnn_h3" class="edge" x1="358.0" y1="77.0" x2="358.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h2__rnn_h3" class="edge" x1="289.0" y1="180.0" x2="331.0" y2="180.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_in4__rnn_h4" class="edge" x1="454.0" y1="77.0" x2="454.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h3__rnn_h4" class="edge" x1="385.0" y1="180.0" x2="427.0" y2="180.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_in5__rnn_h5" class="edge" x1="550.0" y1="77.0" x2="550.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h4__rnn_h5" class="edge" x1="481.0" y1="180.0" x2="523.0" y2="180.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_in6__rnn_h6" class="edge" x1="646.0" y1="77.0" x2="646.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h5__rnn_h6" class="edge" x1="577.0" y1="180.0" x2="619.0" y2="180.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_in7__rnn_h7" class="edge" x1="742.0" y1="77.0" x2="742.0" y2="163.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h6__rnn_h7" class="edge" x1="673.0" y1="180.0" x2="715.0" y2="180.0" marker-end="url(#arw)"/>
+<line id="edge__rnn_h7__rnn_pred" class="edge" x1="742.0" y1="197.0" x2="742.0" y2="283.0" marker-end="url(#arw)"/>
+<g class="node" onclick="showRF('rnn_in0')" style="cursor:pointer"><rect id="node__rnn_in0" class="n-input" x="43.0" y="43.0" width="54" height="34" rx="7"/><text x="70.0" y="65.0" text-anchor="middle">m</text></g>
+<g class="node" onclick="showRF('rnn_in1')" style="cursor:pointer"><rect id="node__rnn_in1" class="n-input" x="139.0" y="43.0" width="54" height="34" rx="7"/><text x="166.0" y="65.0" text-anchor="middle">a</text></g>
+<g class="node" onclick="showRF('rnn_in2')" style="cursor:pointer"><rect id="node__rnn_in2" class="n-input" x="235.0" y="43.0" width="54" height="34" rx="7"/><text x="262.0" y="65.0" text-anchor="middle">c</text></g>
+<g class="node" onclick="showRF('rnn_in3')" style="cursor:pointer"><rect id="node__rnn_in3" class="n-input" x="331.0" y="43.0" width="54" height="34" rx="7"/><text x="358.0" y="65.0" text-anchor="middle">h</text></g>
+<g class="node" onclick="showRF('rnn_in4')" style="cursor:pointer"><rect id="node__rnn_in4" class="n-input" x="427.0" y="43.0" width="54" height="34" rx="7"/><text x="454.0" y="65.0" text-anchor="middle">i</text></g>
+<g class="node" onclick="showRF('rnn_in5')" style="cursor:pointer"><rect id="node__rnn_in5" class="n-input" x="523.0" y="43.0" width="54" height="34" rx="7"/><text x="550.0" y="65.0" text-anchor="middle">n</text></g>
+<g class="node" onclick="showRF('rnn_in6')" style="cursor:pointer"><rect id="node__rnn_in6" class="n-input" x="619.0" y="43.0" width="54" height="34" rx="7"/><text x="646.0" y="65.0" text-anchor="middle">e</text></g>
+<g class="node" onclick="showRF('rnn_in7')" style="cursor:pointer"><rect id="node__rnn_in7" class="n-input" x="715.0" y="43.0" width="54" height="34" rx="7"/><text x="742.0" y="65.0" text-anchor="middle">s</text></g>
+<g class="node" onclick="showRF('rnn_h0')" style="cursor:pointer"><rect id="node__rnn_h0" class="n-rnn" x="43.0" y="163.0" width="54" height="34" rx="7"/><text x="70.0" y="185.0" text-anchor="middle">h1</text></g>
+<g class="node" onclick="showRF('rnn_h1')" style="cursor:pointer"><rect id="node__rnn_h1" class="n-rnn" x="139.0" y="163.0" width="54" height="34" rx="7"/><text x="166.0" y="185.0" text-anchor="middle">h2</text></g>
+<g class="node" onclick="showRF('rnn_h2')" style="cursor:pointer"><rect id="node__rnn_h2" class="n-rnn" x="235.0" y="163.0" width="54" height="34" rx="7"/><text x="262.0" y="185.0" text-anchor="middle">h3</text></g>
+<g class="node" onclick="showRF('rnn_h3')" style="cursor:pointer"><rect id="node__rnn_h3" class="n-rnn" x="331.0" y="163.0" width="54" height="34" rx="7"/><text x="358.0" y="185.0" text-anchor="middle">h4</text></g>
+<g class="node" onclick="showRF('rnn_h4')" style="cursor:pointer"><rect id="node__rnn_h4" class="n-rnn" x="427.0" y="163.0" width="54" height="34" rx="7"/><text x="454.0" y="185.0" text-anchor="middle">h5</text></g>
+<g class="node" onclick="showRF('rnn_h5')" style="cursor:pointer"><rect id="node__rnn_h5" class="n-rnn" x="523.0" y="163.0" width="54" height="34" rx="7"/><text x="550.0" y="185.0" text-anchor="middle">h6</text></g>
+<g class="node" onclick="showRF('rnn_h6')" style="cursor:pointer"><rect id="node__rnn_h6" class="n-rnn" x="619.0" y="163.0" width="54" height="34" rx="7"/><text x="646.0" y="185.0" text-anchor="middle">h7</text></g>
+<g class="node" onclick="showRF('rnn_h7')" style="cursor:pointer"><rect id="node__rnn_h7" class="n-rnn" x="715.0" y="163.0" width="54" height="34" rx="7"/><text x="742.0" y="185.0" text-anchor="middle">h8</text></g>
+<g class="node" onclick="showRF('rnn_pred')" style="cursor:pointer"><rect id="node__rnn_pred" class="n-pred" x="715.0" y="283.0" width="54" height="34" rx="7"/><text x="742.0" y="305.0" text-anchor="middle">next</text></g>
+</svg>
+  <div class="legend"><span class="sw" style="background:#bbf7d0"></span>
+  every hidden box reuses the <b>same one</b> cell's weights.</div>
+</div>
+
+<div class="panel">
+  <h2>3. WaveNet <span class="tag t-tree">whole history &middot; parallel &middot; log-depth</span></h2>
+  <p class="lead">A tree of small conv layers fuses pairs, then pairs-of-pairs, doubling
+  reach at each level. Click the top <b>next</b> node: <b>all 8</b> inputs light up like
+  the RNN &mdash; but it got there in only <b>3 layers</b> (log&#8322;8), and each layer's
+  boxes are independent so they run in parallel like a CNN. WaveNet is the bridge:
+  RNN's long memory, CNN's parallel speed.</p>
+  <svg viewBox="0 0 860 350" width="100%" style="max-width:860px">
+<defs><marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/></marker></defs>
+<line id="edge__wn_in0__wn_l1_0" class="edge" x1="70.0" y1="283.0" x2="118.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_in1__wn_l1_0" class="edge" x1="166.0" y1="283.0" x2="118.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_in2__wn_l1_1" class="edge" x1="262.0" y1="283.0" x2="310.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_in3__wn_l1_1" class="edge" x1="358.0" y1="283.0" x2="310.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_in4__wn_l1_2" class="edge" x1="454.0" y1="283.0" x2="502.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_in5__wn_l1_2" class="edge" x1="550.0" y1="283.0" x2="502.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_in6__wn_l1_3" class="edge" x1="646.0" y1="283.0" x2="694.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_in7__wn_l1_3" class="edge" x1="742.0" y1="283.0" x2="694.0" y2="227.0" marker-end="url(#arw)"/>
+<line id="edge__wn_l1_0__wn_l2_0" class="edge" x1="118.0" y1="193.0" x2="214.0" y2="137.0" marker-end="url(#arw)"/>
+<line id="edge__wn_l1_1__wn_l2_0" class="edge" x1="310.0" y1="193.0" x2="214.0" y2="137.0" marker-end="url(#arw)"/>
+<line id="edge__wn_l1_2__wn_l2_1" class="edge" x1="502.0" y1="193.0" x2="598.0" y2="137.0" marker-end="url(#arw)"/>
+<line id="edge__wn_l1_3__wn_l2_1" class="edge" x1="694.0" y1="193.0" x2="598.0" y2="137.0" marker-end="url(#arw)"/>
+<line id="edge__wn_l2_0__wn_top" class="edge" x1="214.0" y1="103.0" x2="406.0" y2="57.0" marker-end="url(#arw)"/>
+<line id="edge__wn_l2_1__wn_top" class="edge" x1="598.0" y1="103.0" x2="406.0" y2="57.0" marker-end="url(#arw)"/>
+<g class="node" onclick="showRF('wn_in0')" style="cursor:pointer"><rect id="node__wn_in0" class="n-input" x="43.0" y="283.0" width="54" height="34" rx="7"/><text x="70.0" y="305.0" text-anchor="middle">m</text></g>
+<g class="node" onclick="showRF('wn_in1')" style="cursor:pointer"><rect id="node__wn_in1" class="n-input" x="139.0" y="283.0" width="54" height="34" rx="7"/><text x="166.0" y="305.0" text-anchor="middle">a</text></g>
+<g class="node" onclick="showRF('wn_in2')" style="cursor:pointer"><rect id="node__wn_in2" class="n-input" x="235.0" y="283.0" width="54" height="34" rx="7"/><text x="262.0" y="305.0" text-anchor="middle">c</text></g>
+<g class="node" onclick="showRF('wn_in3')" style="cursor:pointer"><rect id="node__wn_in3" class="n-input" x="331.0" y="283.0" width="54" height="34" rx="7"/><text x="358.0" y="305.0" text-anchor="middle">h</text></g>
+<g class="node" onclick="showRF('wn_in4')" style="cursor:pointer"><rect id="node__wn_in4" class="n-input" x="427.0" y="283.0" width="54" height="34" rx="7"/><text x="454.0" y="305.0" text-anchor="middle">i</text></g>
+<g class="node" onclick="showRF('wn_in5')" style="cursor:pointer"><rect id="node__wn_in5" class="n-input" x="523.0" y="283.0" width="54" height="34" rx="7"/><text x="550.0" y="305.0" text-anchor="middle">n</text></g>
+<g class="node" onclick="showRF('wn_in6')" style="cursor:pointer"><rect id="node__wn_in6" class="n-input" x="619.0" y="283.0" width="54" height="34" rx="7"/><text x="646.0" y="305.0" text-anchor="middle">e</text></g>
+<g class="node" onclick="showRF('wn_in7')" style="cursor:pointer"><rect id="node__wn_in7" class="n-input" x="715.0" y="283.0" width="54" height="34" rx="7"/><text x="742.0" y="305.0" text-anchor="middle">s</text></g>
+<g class="node" onclick="showRF('wn_l1_0')" style="cursor:pointer"><rect id="node__wn_l1_0" class="n-wl1" x="91.0" y="193.0" width="54" height="34" rx="7"/><text x="118.0" y="215.0" text-anchor="middle">·</text></g>
+<g class="node" onclick="showRF('wn_l1_1')" style="cursor:pointer"><rect id="node__wn_l1_1" class="n-wl1" x="283.0" y="193.0" width="54" height="34" rx="7"/><text x="310.0" y="215.0" text-anchor="middle">·</text></g>
+<g class="node" onclick="showRF('wn_l1_2')" style="cursor:pointer"><rect id="node__wn_l1_2" class="n-wl1" x="475.0" y="193.0" width="54" height="34" rx="7"/><text x="502.0" y="215.0" text-anchor="middle">·</text></g>
+<g class="node" onclick="showRF('wn_l1_3')" style="cursor:pointer"><rect id="node__wn_l1_3" class="n-wl1" x="667.0" y="193.0" width="54" height="34" rx="7"/><text x="694.0" y="215.0" text-anchor="middle">·</text></g>
+<g class="node" onclick="showRF('wn_l2_0')" style="cursor:pointer"><rect id="node__wn_l2_0" class="n-wl2" x="187.0" y="103.0" width="54" height="34" rx="7"/><text x="214.0" y="125.0" text-anchor="middle">·</text></g>
+<g class="node" onclick="showRF('wn_l2_1')" style="cursor:pointer"><rect id="node__wn_l2_1" class="n-wl2" x="571.0" y="103.0" width="54" height="34" rx="7"/><text x="598.0" y="125.0" text-anchor="middle">·</text></g>
+<g class="node" onclick="showRF('wn_top')" style="cursor:pointer"><rect id="node__wn_top" class="n-wl3" x="379.0" y="23.0" width="54" height="34" rx="7"/><text x="406.0" y="45.0" text-anchor="middle">next</text></g>
+</svg>
+  <div class="legend">
+  <span class="sw" style="background:#e9d5ff"></span>layer 1
+  <span class="sw" style="background:#ddd6fe"></span>layer 2
+  <span class="sw" style="background:#c4b5fd"></span>layer 3
+  &mdash; weights shared <i>within</i> a layer (across positions), different per layer.</div>
+</div>
+
+<div class="panel" style="background:#0f172a;color:#e2e8f0">
+  <h2 style="color:#fff">The one-glance summary</h2>
+  <p style="color:#cbd5e1;font-size:14px">To let position <b>t</b> depend on the very
+  first character:<br>
+  &bull; <b>CNN</b> (single layer): <b>can't</b> &mdash; reach is stuck at the window size.<br>
+  &bull; <b>RNN</b>: yes, but the signal travels <b>8 sequential steps</b> down the chain
+  (deep &rarr; gradients fade &mdash; the disease the LSTM cures).<br>
+  &bull; <b>WaveNet</b>: yes, in <b>3 parallel layers</b> (log-depth tree).</p>
+</div>
+
+<script>
+const PARENTS={"cnn_o1": ["cnn_in0", "cnn_in1"], "cnn_o2": ["cnn_in1", "cnn_in2"], "cnn_o3": ["cnn_in2", "cnn_in3"], "cnn_o4": ["cnn_in3", "cnn_in4"], "cnn_o5": ["cnn_in4", "cnn_in5"], "cnn_o6": ["cnn_in5", "cnn_in6"], "cnn_o7": ["cnn_in6", "cnn_in7"], "rnn_h0": ["rnn_in0"], "rnn_h1": ["rnn_in1", "rnn_h0"], "rnn_h2": ["rnn_in2", "rnn_h1"], "rnn_h3": ["rnn_in3", "rnn_h2"], "rnn_h4": ["rnn_in4", "rnn_h3"], "rnn_h5": ["rnn_in5", "rnn_h4"], "rnn_h6": ["rnn_in6", "rnn_h5"], "rnn_h7": ["rnn_in7", "rnn_h6"], "rnn_pred": ["rnn_h7"], "wn_l1_0": ["wn_in0", "wn_in1"], "wn_l1_1": ["wn_in2", "wn_in3"], "wn_l1_2": ["wn_in4", "wn_in5"], "wn_l1_3": ["wn_in6", "wn_in7"], "wn_l2_0": ["wn_l1_0", "wn_l1_1"], "wn_l2_1": ["wn_l1_2", "wn_l1_3"], "wn_top": ["wn_l2_0", "wn_l2_1"]};
+const META={"cnn_in0": {"panel": "cnn", "label": "m"}, "cnn_in1": {"panel": "cnn", "label": "a"}, "cnn_in2": {"panel": "cnn", "label": "c"}, "cnn_in3": {"panel": "cnn", "label": "h"}, "cnn_in4": {"panel": "cnn", "label": "i"}, "cnn_in5": {"panel": "cnn", "label": "n"}, "cnn_in6": {"panel": "cnn", "label": "e"}, "cnn_in7": {"panel": "cnn", "label": "s"}, "cnn_o1": {"panel": "cnn", "label": "o1"}, "cnn_o2": {"panel": "cnn", "label": "o2"}, "cnn_o3": {"panel": "cnn", "label": "o3"}, "cnn_o4": {"panel": "cnn", "label": "o4"}, "cnn_o5": {"panel": "cnn", "label": "o5"}, "cnn_o6": {"panel": "cnn", "label": "o6"}, "cnn_o7": {"panel": "cnn", "label": "o7"}, "rnn_in0": {"panel": "rnn", "label": "m"}, "rnn_in1": {"panel": "rnn", "label": "a"}, "rnn_in2": {"panel": "rnn", "label": "c"}, "rnn_in3": {"panel": "rnn", "label": "h"}, "rnn_in4": {"panel": "rnn", "label": "i"}, "rnn_in5": {"panel": "rnn", "label": "n"}, "rnn_in6": {"panel": "rnn", "label": "e"}, "rnn_in7": {"panel": "rnn", "label": "s"}, "rnn_h0": {"panel": "rnn", "label": "h1"}, "rnn_h1": {"panel": "rnn", "label": "h2"}, "rnn_h2": {"panel": "rnn", "label": "h3"}, "rnn_h3": {"panel": "rnn", "label": "h4"}, "rnn_h4": {"panel": "rnn", "label": "h5"}, "rnn_h5": {"panel": "rnn", "label": "h6"}, "rnn_h6": {"panel": "rnn", "label": "h7"}, "rnn_h7": {"panel": "rnn", "label": "h8"}, "rnn_pred": {"panel": "rnn", "label": "next"}, "wn_in0": {"panel": "wn", "label": "m"}, "wn_in1": {"panel": "wn", "label": "a"}, "wn_in2": {"panel": "wn", "label": "c"}, "wn_in3": {"panel": "wn", "label": "h"}, "wn_in4": {"panel": "wn", "label": "i"}, "wn_in5": {"panel": "wn", "label": "n"}, "wn_in6": {"panel": "wn", "label": "e"}, "wn_in7": {"panel": "wn", "label": "s"}, "wn_l1_0": {"panel": "wn", "label": "\u00b7"}, "wn_l1_1": {"panel": "wn", "label": "\u00b7"}, "wn_l1_2": {"panel": "wn", "label": "\u00b7"}, "wn_l1_3": {"panel": "wn", "label": "\u00b7"}, "wn_l2_0": {"panel": "wn", "label": "\u00b7"}, "wn_l2_1": {"panel": "wn", "label": "\u00b7"}, "wn_top": {"panel": "wn", "label": "next"}};
+const INPUTS=["cnn_in0", "cnn_in1", "cnn_in2", "cnn_in3", "cnn_in4", "cnn_in5", "cnn_in6", "cnn_in7", "rnn_in0", "rnn_in1", "rnn_in2", "rnn_in3", "rnn_in4", "rnn_in5", "rnn_in6", "rnn_in7", "wn_in0", "wn_in1", "wn_in2", "wn_in3", "wn_in4", "wn_in5", "wn_in6", "wn_in7"];
+
+
+function clearHl(){
+  document.querySelectorAll('.hl-node').forEach(e=>e.classList.remove('hl-node'));
+  document.querySelectorAll('.hl-edge').forEach(e=>e.classList.remove('hl-edge'));
+}
+function showRF(id){
+  clearHl();
+  const seen = new Set();
+  const stack = [id];
+  seen.add(id);
+  while(stack.length){
+    const n = stack.pop();
+    (PARENTS[n]||[]).forEach(p=>{
+      const eln = document.getElementById('edge__'+p+'__'+n);
+      if(eln) eln.classList.add('hl-edge');
+      if(!seen.has(p)){ seen.add(p); stack.push(p); }
+    });
+  }
+  let nInputs = 0;
+  seen.forEach(n=>{
+    const el = document.getElementById('node__'+n);
+    if(el) el.classList.add('hl-node');
+    if(INPUTS.includes(n)) nInputs++;
+  });
+  const panel = META[id].panel;
+  const names = {cnn:'CNN', rnn:'RNN', wn:'WaveNet'};
+  document.getElementById('banner').innerHTML =
+    '<b>'+names[panel]+'</b> \u2014 node <b>'+META[id].label+
+    '</b> is influenced by <b>'+nInputs+' of 8</b> inputs.';
+}
+
+</script>
+</body></html>
