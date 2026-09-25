@@ -56,6 +56,13 @@ responding and let it shape how you explain, not just what you explain.
    (e.g. MLE, length normalization / beam search), but only AFTER the intuition lands.
 8. **Correct misconceptions directly, even small ones** — he wants that — while staying
    supportive and specific about which part of his thinking was sound.
+   - **Recurring failure mode: he fuses two adjacent mechanisms into one and reasons from
+     the merge** (seen with √head_size vs LayerNorm, residual-add vs multi-head-concat,
+     "each head gets a slice of the input", batchnorm vs layernorm). Fastest fix is to
+     explicitly *name and separate the two tools* and state each one's distinct job, rather
+     than only patching the local claim. He also actively flags apparent contradictions in
+     your wording — pin down the ambiguous term (e.g. "logits = the linear's output") to
+     dissolve it.
 9. ⭐ **Anchor concepts with their origin story.** He memorizes far better when an idea
    comes with the story of *why it was invented / where it came from* — a tangential
    historical side-track is welcome, not noise. When you introduce something, include its

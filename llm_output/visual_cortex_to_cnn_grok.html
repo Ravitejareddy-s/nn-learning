@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From a cat's brain to the CNN — the origin story</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2d333b; --accent:#7ee787; --fire:#ff7b54; --nerve:#7aa2ff; --gold:#ffd66b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1000px;margin:0 auto;padding:34px 22px 90px;}
+  h1{font-size:27px;margin:0 0 6px;letter-spacing:-.3px}
+  h2{font-size:20px;margin:40px 0 10px;color:var(--accent)}
+  .sub{color:var(--muted);margin:0 0 22px;font-size:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin:18px 0}
+  p{margin:10px 0}
+  em{color:var(--gold);font-style:normal}
+  .muted{color:var(--muted);font-size:14px}
+  a{color:var(--nerve)}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;margin-top:8px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#0b0f14;color:var(--accent)}
+  .bio{color:var(--fire);font-weight:600}
+  .cnn{color:var(--nerve);font-weight:600}
+  .controls{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  input[type=range]{width:260px}
+  .spikes{font-family:ui-monospace,Menlo,monospace;color:var(--fire);font-size:20px;letter-spacing:1px;min-height:26px}
+  .row{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+  .timeline{position:relative;margin:10px 0}
+  .tl{display:flex;gap:0;flex-wrap:wrap}
+  .step{flex:1;min-width:150px;border-top:3px solid var(--line);padding:12px 10px;position:relative}
+  .step b{color:var(--gold)}
+  .step .yr{color:var(--accent);font-weight:700;font-size:14px}
+  .punch{border-left:3px solid var(--accent);padding:12px 16px;background:#0b0f14;border-radius:0 10px 10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>From a cat's brain to the CNN</h1>
+  <p class="sub">Convolutional nets are reverse-engineered from what Hubel &amp; Wiesel found by sticking an electrode into a cat's visual cortex in 1959. Here's the whole chain — and the twist ending where the copy became the best model of the original.</p>
+
+  <h2>1. The happy accident (1958–59)</h2>
+  <div class="card">
+    <p>They recorded from <b>one neuron</b> in the cat's primary visual cortex (<b>V1</b>) and flashed <em>dots</em> to find its trigger.
+    Almost nothing. Then, sliding a glass slide into the projector, its moving <em>edge</em> swept the screen — and the neuron
+    fired like a machine gun. The trigger was never dots. It was an <b>oriented edge</b>.</p>
+    <p>Play with it: rotate the bar and watch the neuron's spike train. It only screams at <em>one</em> angle.</p>
+
+    <div class="row">
+      <svg id="barsvg" viewBox="0 0 160 160" width="160" height="160">
+        <circle cx="80" cy="80" r="74" fill="#0b0f14" stroke="#2d333b"/>
+        <g id="bar"><rect x="74" y="24" width="12" height="112" rx="4" fill="#ffd66b"/></g>
+        <circle cx="80" cy="80" r="74" fill="none" stroke="#2d333b" stroke-dasharray="3 4"/>
+      </svg>
+      <div style="flex:1;min-width:220px">
+        <div>neuron preferred angle: <b style="color:var(--accent)">45°</b></div>
+        <div class="controls">
+          <label>bar angle: <input type="range" id="ang" min="0" max="180" value="0"> <span id="angv">0°</span></label>
+        </div>
+        <div style="margin-top:12px">firing rate:</div>
+        <div class="spikes" id="spk">·</div>
+        <div class="muted" id="rate">weak — wrong orientation</div>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:14px">Each V1 neuron is tuned to one orientation; a whole population tiles every angle. That single fact —
+    <b>local, oriented edge detectors</b> — is the seed of the entire convolutional idea.</p>
+  </div>
+
+  <h2>2. Simple → complex → hierarchy</h2>
+  <div class="card">
+    <p>Hubel &amp; Wiesel found the neurons come in a <b>hierarchy of increasing abstraction and invariance</b>:</p>
+    <svg viewBox="0 0 860 220" width="100%" style="max-width:820px;display:block;margin:6px auto">
+      <!-- simple -->
+      <rect x="20" y="60" width="200" height="100" rx="10" fill="#161b22" stroke="#ff7b54"/>
+      <text x="120" y="48" text-anchor="middle" fill="#ff7b54" font-size="15" font-weight="700">SIMPLE cells</text>
+      <text x="120" y="100" text-anchor="middle" fill="#e6edf3" font-size="13">oriented edge</text>
+      <text x="120" y="120" text-anchor="middle" fill="#9aa7b4" font-size="12">fussy about exact position</text>
+      <line x1="80" y1="135" x2="160" y2="135" stroke="#ffd66b" stroke-width="6" transform="rotate(-30 120 135)"/>
+
+      <path d="M220,110 L300,110" stroke="#9aa7b4" stroke-width="2" marker-end="url(#a2)"/>
+      <defs><marker id="a2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#9aa7b4"/></marker></defs>
+
+      <!-- complex -->
+      <rect x="300" y="60" width="220" height="100" rx="10" fill="#161b22" stroke="#7aa2ff"/>
+      <text x="410" y="48" text-anchor="middle" fill="#7aa2ff" font-size="15" font-weight="700">COMPLEX cells</text>
+      <text x="410" y="100" text-anchor="middle" fill="#e6edf3" font-size="13">same edge, position-tolerant</text>
+      <text x="410" y="120" text-anchor="middle" fill="#9aa7b4" font-size="12">pools over simple cells → invariance</text>
+
+      <path d="M520,110 L600,110" stroke="#9aa7b4" stroke-width="2" marker-end="url(#a2)"/>
+
+      <!-- hypercomplex -->
+      <rect x="600" y="60" width="240" height="100" rx="10" fill="#161b22" stroke="#7ee787"/>
+      <text x="720" y="48" text-anchor="middle" fill="#7ee787" font-size="15" font-weight="700">HYPERCOMPLEX</text>
+      <text x="720" y="100" text-anchor="middle" fill="#e6edf3" font-size="13">corners, line-endings</text>
+      <text x="720" y="120" text-anchor="middle" fill="#9aa7b4" font-size="12">even more abstract</text>
+
+      <text x="430" y="200" text-anchor="middle" fill="#ffd66b" font-size="13">each level builds more abstract + more invariant features from the level below</text>
+    </svg>
+  </div>
+
+  <h2>3. The mapping — biology → CNN, almost one-to-one</h2>
+  <div class="card">
+    <table>
+      <tr><th>Visual cortex</th><th>CNN component</th></tr>
+      <tr><td class="bio">Neuron sees only a small local patch</td><td class="cnn">convolutional filter over a small window</td></tr>
+      <tr><td class="bio">Same edge-detector exists all over the visual field</td><td class="cnn">weight sharing — one filter reused everywhere</td></tr>
+      <tr><td class="bio">Simple cells = oriented edge detectors</td><td class="cnn">first conv layer learns edge / Gabor filters (looks like V1!)</td></tr>
+      <tr><td class="bio">Complex cells = position-tolerant pooling</td><td class="cnn">max-pooling → translation invariance</td></tr>
+      <tr><td class="bio">Hierarchy V1→V2→V4→IT</td><td class="cnn">stacked conv layers, increasing abstraction</td></tr>
+    </table>
+  </div>
+
+  <h2>4. The hierarchy, side by side</h2>
+  <div class="card">
+    <p>Walk up the <b>ventral stream</b> in the brain and up the <b>layers of a CNN</b>, and you see the same progression:
+    edges → textures → parts → whole objects.</p>
+    <svg viewBox="0 0 860 250" width="100%" style="max-width:820px;display:block;margin:6px auto">
+      <!-- brain row -->
+      <text x="10" y="40" fill="#ff7b54" font-size="14" font-weight="700">BRAIN</text>
+      <g font-size="12" text-anchor="middle">
+        <rect x="120" y="20" width="120" height="46" rx="8" fill="#1b2330" stroke="#ff7b54"/><text x="180" y="48" fill="#fff">V1 — edges</text>
+        <rect x="290" y="20" width="120" height="46" rx="8" fill="#1b2330" stroke="#ff7b54"/><text x="350" y="48" fill="#fff">V2 — textures</text>
+        <rect x="460" y="20" width="120" height="46" rx="8" fill="#1b2330" stroke="#ff7b54"/><text x="520" y="48" fill="#fff">V4 — parts</text>
+        <rect x="630" y="20" width="150" height="46" rx="8" fill="#1b2330" stroke="#ff7b54"/><text x="705" y="48" fill="#fff">IT — whole objects</text>
+      </g>
+      <!-- little feature glyphs -->
+      <g>
+        <line x1="160" y1="110" x2="200" y2="90" stroke="#ffd66b" stroke-width="4"/>
+        <path d="M320,88 q10,20 20,0 q10,-20 20,0" stroke="#ffd66b" stroke-width="3" fill="none"/>
+        <circle cx="520" cy="98" r="14" fill="none" stroke="#ffd66b" stroke-width="3"/><circle cx="520" cy="98" r="4" fill="#ffd66b"/>
+        <circle cx="705" cy="98" r="16" fill="none" stroke="#7ee787" stroke-width="3"/><circle cx="699" cy="94" r="2.5" fill="#7ee787"/><circle cx="711" cy="94" r="2.5" fill="#7ee787"/><path d="M698,104 q7,7 14,0" stroke="#7ee787" fill="none" stroke-width="2"/>
+      </g>
+      <!-- cnn row -->
+      <text x="10" y="175" fill="#7aa2ff" font-size="14" font-weight="700">CNN</text>
+      <g font-size="12" text-anchor="middle">
+        <rect x="120" y="155" width="120" height="46" rx="8" fill="#141c2b" stroke="#7aa2ff"/><text x="180" y="183" fill="#fff">conv1 — edges</text>
+        <rect x="290" y="155" width="120" height="46" rx="8" fill="#141c2b" stroke="#7aa2ff"/><text x="350" y="183" fill="#fff">conv2 — textures</text>
+        <rect x="460" y="155" width="120" height="46" rx="8" fill="#141c2b" stroke="#7aa2ff"/><text x="520" y="183" fill="#fff">conv3 — parts</text>
+        <rect x="630" y="155" width="150" height="46" rx="8" fill="#141c2b" stroke="#7aa2ff"/><text x="705" y="183" fill="#fff">deep — objects</text>
+      </g>
+      <g stroke="#9aa7b4" stroke-width="1.5" stroke-dasharray="4 4">
+        <line x1="180" y1="120" x2="180" y2="155"/><line x1="350" y1="120" x2="350" y2="155"/>
+        <line x1="520" y1="120" x2="520" y2="155"/><line x1="705" y1="120" x2="705" y2="155"/>
+      </g>
+      <text x="430" y="235" text-anchor="middle" fill="#ffd66b" font-size="13">same abstraction ladder, discovered independently by evolution and by gradient descent</text>
+    </svg>
+  </div>
+
+  <h2>5. The lineage to memorize</h2>
+  <div class="card">
+    <div class="tl">
+      <div class="step"><div class="yr">1959</div><b>Hubel &amp; Wiesel</b><br><span class="muted">measure simple/complex cells in a cat. Nobel Prize.</span></div>
+      <div class="step"><div class="yr">1980</div><b>Neocognitron</b> (Fukushima)<br><span class="muted">copies S-cells/C-cells directly. First CNN — but no backprop.</span></div>
+      <div class="step"><div class="yr">1989–98</div><b>LeNet</b> (LeCun)<br><span class="muted">adds backpropagation, reads ZIP codes &amp; MNIST digits.</span></div>
+      <div class="step"><div class="yr">2012</div><b>AlexNet</b><br><span class="muted">deep, on GPUs, crushes ImageNet — lights the deep-learning era.</span></div>
+    </div>
+  </div>
+
+  <h2>6. The twist ending</h2>
+  <div class="card">
+    <div class="punch">
+      <p style="margin:0">In 2014, Yamins &amp; DiCarlo trained a deep CNN <em>only</em> to classify objects — never told it a single fact about the brain.
+      Then they checked its guts against real neurons: its <b>middle layers predicted real V4 firing</b>, and its <b>top layer predicted real
+      IT firing</b> — better than any model neuroscientists had hand-built.</p>
+    </div>
+    <p>So the loop closed: a cat's cortex inspired the CNN, and decades later the CNN became our <b>best working model of that same cortex.</b>
+    The copy explains the original.</p>
+    <p class="muted">Sources &amp; footage:
+      <a href="https://www.youtube.com/results?search_query=hubel+wiesel+cat+experiment" target="_blank">Hubel &amp; Wiesel cat experiment (video)</a> ·
+      <a href="https://www.ncbi.nlm.nih.gov/books/NBK11112/" target="_blank">Functional organization of the striate cortex</a> ·
+      <a href="https://pnas.org/doi/full/10.1073/pnas.1403112111" target="_blank">Yamins &amp; DiCarlo, PNAS 2014</a>
+    </p>
+  </div>
+
+</div>
+
+<script>
+  const ang = document.getElementById('ang');
+  const bar = document.getElementById('bar');
+  const angv = document.getElementById('angv');
+  const spk = document.getElementById('spk');
+  const rate = document.getElementById('rate');
+  const PREF = 45;
+  function update(){
+    const a = +ang.value;
+    angv.textContent = a + '°';
+    bar.setAttribute('transform', `rotate(${a} 80 80)`);
+    // tuning: cos of double-angle difference, peaks at 45 and 45+180
+    let d = Math.abs(a - PREF) % 180; if(d>90) d = 180 - d;
+    const resp = Math.max(0, Math.cos(d/90*Math.PI/2)); // 1 at match, 0 at 90 off
+    const n = Math.round(resp*resp*40);
+    spk.textContent = n>0 ? '|'.repeat(n) : '·';
+    if(resp>0.9) rate.textContent = 'MAXIMAL — this is its preferred edge!';
+    else if(resp>0.5) rate.textContent = 'moderate';
+    else rate.textContent = 'weak — wrong orientation';
+  }
+  ang.addEventListener('input', update); update();
+</script>
+</body>
+</html>
